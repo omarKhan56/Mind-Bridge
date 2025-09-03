@@ -208,7 +208,6 @@ router.post('/counselors', adminAuth, async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
-});
 
 // Update counselor
 router.put('/counselors/:id', adminAuth, async (req, res) => {

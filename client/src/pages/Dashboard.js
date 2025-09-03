@@ -10,6 +10,7 @@ import { Progress } from '../components/ui/progress';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import WellnessTracker from '../components/WellnessTracker';
 import WellnessButton from '../components/WellnessButton';
+import AIInsights from '../components/AIInsights';
 import { 
   LineChart, 
   Line, 
@@ -736,14 +737,14 @@ const Dashboard = () => {
               <GoalTracker />
             </motion.div>
 
-            {/* Mindfulness Corner */}
+            {/* AI Insights */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.3 }}
+              transition={{ duration: 0.5, delay: 1.4 }}
               whileHover={{ scale: 1.01 }}
             >
-              <MindfulnessCorner />
+              <AIInsights />
             </motion.div>
           </motion.div>
 

@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const geminiService = require('./services/geminiService');
 const { inngest, functions, serve } = require('./lib/inngest');
+const aiScheduler = require('./services/aiScheduler');
 const User = require('./models/User');
 const AISession = require('./models/AISession');
 
@@ -18,6 +19,7 @@ const goalRoutes = require('./routes/goals');
 const counselorRoutes = require('./routes/counselor');
 const adminRoutes = require('./routes/admin');
 const wellnessRoutes = require('./routes/wellness');
+const aiAnalysisRoutes = require('./routes/aiAnalysis');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,6 +45,7 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/counselor', counselorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/wellness', wellnessRoutes);
+app.use('/api/ai-analysis', aiAnalysisRoutes);
 
 // Test endpoint for AI service
 app.post('/api/test-ai', async (req, res) => {
@@ -176,6 +179,42 @@ io.on('connection', (socket) => {
         responseType: "therapeutic"
       });
 
+      // Real-time sentiment analysis for crisis detection
+      const SentimentAnalyzer = require('./services/aiAnalysis/sentimentAnalyzer');
+      const sentimentAnalyzer = new SentimentAnalyzer();
+      
+      try {
+        const sentiment = await sentimentAnalyzer.analyzeChatSentiment([{ content: message }]);
+        
+        // Check for crisis indicators
+        if (sentiment.crisisIndicators?.present && sentiment.crisisIndicators.confidence > 0.7) {
+          console.log(`🚨 Crisis indicator detected for user ${userId}`);
+          
+          // Store alert
+          await User.findByIdAndUpdate(userId, {
+            $push: {
+              alerts: {
+                type: 'crisis_indicator',
+                message: 'Crisis language detected in chat',
+                timestamp: new Date(),
+                severity: sentiment.urgencyLevel || 4,
+                acknowledged: false
+              }
+            }
+          });
+          
+          // Emit alert to counselors (if any are connected)
+          io.emit('crisis_alert', {
+            userId,
+            message: 'Crisis indicator detected',
+            urgency: sentiment.urgencyLevel,
+            timestamp: new Date()
+          });
+        }
+      } catch (sentimentError) {
+        console.log('⚠️ Sentiment analysis failed (non-critical):', sentimentError.message);
+      }
+
       // Send event to Inngest for processing (non-blocking)
       inngest.send({
         name: 'chat/message-sent',
@@ -238,4 +277,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mindbridg
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Start AI analysis scheduler
+  if (process.env.NODE_ENV !== 'test') {
+    aiScheduler.start();
+  }
 });

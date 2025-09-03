@@ -32,6 +32,30 @@ const userSchema = new mongoose.Schema({
   lastActive: { type: Date, default: Date.now },
   resourcesAccessed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Resource' }],
   
+  // AI Analysis data
+  aiAnalysis: {
+    lastAnalysis: Date,
+    riskLevel: { type: String, enum: ['low', 'moderate', 'high', 'critical'], default: 'low' },
+    sentiment: { type: Number, default: 5, min: 1, max: 10 },
+    insights: [{
+      title: String,
+      description: String,
+      type: { type: String, enum: ['positive', 'neutral', 'concerning'] },
+      confidence: Number,
+      createdAt: { type: Date, default: Date.now }
+    }],
+    trend: { type: String, enum: ['improving', 'stable', 'declining'], default: 'stable' }
+  },
+  
+  // Alert system
+  alerts: [{
+    type: { type: String, enum: ['crisis_indicator', 'risk_increase', 'missed_appointment', 'low_engagement'] },
+    message: String,
+    timestamp: { type: Date, default: Date.now },
+    severity: { type: Number, min: 1, max: 5, default: 1 },
+    acknowledged: { type: Boolean, default: false }
+  }],
+  
   createdAt: { type: Date, default: Date.now }
 });
 
