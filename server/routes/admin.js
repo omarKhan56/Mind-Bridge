@@ -6,6 +6,7 @@ const Appointment = require('../models/Appointment');
 const Resource = require('../models/Resource');
 const ForumPost = require('../models/Forum');
 const AISession = require('../models/AISession');
+const { sendCounselorCredentials } = require('../services/emailService');
 const router = express.Router();
 
 const adminAuth = (req, res, next) => {
@@ -170,19 +171,43 @@ router.post('/counselors', adminAuth, async (req, res) => {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
     
+    // Generate password if not provided
+    const counselorPassword = password || Math.random().toString(36).slice(-8);
+    
     const counselor = new User({
       email,
       name,
       college,
       role: 'counselor',
-      password: password || Math.random().toString(36).slice(-8)
+      password: counselorPassword
     });
     
     await counselor.save();
-    res.status(201).json(counselor);
+    
+    // Get college information for email
+    const collegeInfo = await College.findById(college);
+    
+    // Send credentials email
+    try {
+      await sendCounselorCredentials(
+        email, 
+        name, 
+        counselorPassword, 
+        collegeInfo?.name || 'Your Institution'
+      );
+      console.log(`✅ Credentials email sent to ${email}`);
+    } catch (emailError) {
+      console.error('❌ Failed to send credentials email:', emailError);
+      // Don't fail the counselor creation if email fails
+    }
+    
+    // Return counselor without password
+    const { password: _, ...counselorData } = counselor.toObject();
+    res.status(201).json(counselorData);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
+});
 });
 
 // Update counselor
