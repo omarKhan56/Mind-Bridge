@@ -21,40 +21,39 @@ class RiskPredictor {
       }
 
       const prompt = `
-        Analyze this student's mental health data to predict risk level:
+        Analyze mental health risk. Return ONLY JSON:
         
-        User Data:
-        - Wellness Scores: ${JSON.stringify(userData.wellnessData)}
-        - Screening Scores: ${JSON.stringify(userData.screeningData)}
-        - Chat Sentiment: ${JSON.stringify(userData.chatSentiment)}
-        - Platform Usage: ${JSON.stringify(userData.usagePatterns)}
-        - Appointment History: ${JSON.stringify(userData.appointments)}
+        Data: ${JSON.stringify({
+          wellness: userData.wellnessData?.slice(-5) || [],
+          screening: userData.screeningData || {},
+          usage: userData.usagePatterns || {}
+        })}
         
-        Return JSON with:
+        Return:
         {
           "currentRiskLevel": "low|moderate|high|critical",
-          "riskScore": number (0-100),
-          "predictedRiskIn7Days": "low|moderate|high|critical",
-          "predictedRiskIn30Days": "low|moderate|high|critical",
-          "riskFactors": ["list of identified risk factors"],
-          "protectiveFactors": ["list of protective factors"],
-          "interventionRecommendations": [
-            {
-              "type": "immediate|short-term|long-term",
-              "action": "specific intervention",
-              "priority": number (1-5)
-            }
-          ],
-          "alertCounselor": boolean,
-          "confidenceLevel": number (0-1)
+          "riskScore": 50,
+          "riskFactors": ["factor1", "factor2"],
+          "protectiveFactors": ["factor1"],
+          "alertCounselor": false,
+          "confidenceLevel": 0.8
         }
       `;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
+      let text = response.text();
       
-      const analysis = JSON.parse(text.replace(/```json\n?|\n?```/g, ''));
+      // Clean the response text
+      text = text.replace(/```json\n?|\n?```/g, '').trim();
+      
+      let analysis;
+      try {
+        analysis = JSON.parse(text);
+      } catch (parseError) {
+        console.log('JSON parse failed, using fallback');
+        return this.getFallbackRiskAnalysis(userData);
+      }
       
       return {
         ...analysis,

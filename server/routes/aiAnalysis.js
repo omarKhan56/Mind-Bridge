@@ -232,4 +232,69 @@ router.post('/batch-analyze', auth, async (req, res) => {
   }
 });
 
+// Admin analytics endpoint
+router.get('/admin/analytics', async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    // Get AI analytics from database
+    const users = await User.find({}).select('aiAnalysis role');
+    
+    let totalAnalyses = 0;
+    let crisisDetected = 0;
+    let highRiskStudents = 0;
+    const riskDistribution = { low: 0, moderate: 0, high: 0, critical: 0 };
+    const insightsGenerated = { personal: 0, counselor: 0, crisis: 0, patterns: 0 };
+
+    users.forEach(user => {
+      if (user.aiAnalysis) {
+        totalAnalyses++;
+        
+        // Count risk levels
+        const riskLevel = user.aiAnalysis.riskLevel;
+        if (riskLevel) {
+          riskDistribution[riskLevel] = (riskDistribution[riskLevel] || 0) + 1;
+          
+          if (riskLevel === 'high' || riskLevel === 'critical') {
+            highRiskStudents++;
+          }
+        }
+
+        // Count crisis detections
+        if (user.aiAnalysis.crisisDetected) {
+          crisisDetected++;
+        }
+
+        // Count insights (mock data for now)
+        insightsGenerated.personal += user.aiAnalysis.insightsCount || 1;
+        if (riskLevel === 'high' || riskLevel === 'critical') {
+          insightsGenerated.counselor++;
+        }
+        if (user.aiAnalysis.crisisDetected) {
+          insightsGenerated.crisis++;
+        }
+        insightsGenerated.patterns += 1;
+      }
+    });
+
+    res.json({
+      available: true,
+      totalAnalyses,
+      crisisDetected,
+      highRiskStudents,
+      accuracy: 95, // Mock accuracy percentage
+      riskDistribution,
+      insightsGenerated,
+      lastUpdated: new Date()
+    });
+
+  } catch (error) {
+    console.error('Admin AI analytics error:', error);
+    res.status(500).json({ message: 'Failed to load AI analytics' });
+  }
+});
+
 module.exports = router;

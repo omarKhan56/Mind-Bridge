@@ -43,10 +43,18 @@ class SentimentAnalyzer {
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
+      let text = response.text();
       
-      // Parse JSON response
-      const analysis = JSON.parse(text.replace(/```json\n?|\n?```/g, ''));
+      // Clean and parse JSON with better error handling
+      text = text.replace(/```json\n?|\n?```/g, '').trim();
+      
+      let analysis;
+      try {
+        analysis = JSON.parse(text);
+      } catch (parseError) {
+        console.log('Sentiment analysis: JSON parse failed, using fallback');
+        return this.getFallbackAnalysis(messages);
+      }
       
       return {
         ...analysis,

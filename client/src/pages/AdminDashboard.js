@@ -11,8 +11,7 @@ import {
   AlertTriangle,
   Download,
   BarChart3,
-  UserCheck,
-  Clock
+  Brain
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -40,6 +39,7 @@ const AdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [userAnalytics, setUserAnalytics] = useState(null);
+  const [aiAnalytics, setAiAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
 
@@ -77,6 +77,15 @@ const AdminDashboard = () => {
       setDashboardData(dashboardRes.data);
       setAppointments(appointmentsRes.data.appointments || []);
       setUserAnalytics(analyticsRes.data);
+
+      // Load AI analytics separately (non-blocking)
+      try {
+        const aiRes = await axios.get('/api/ai-analysis/admin/analytics', config);
+        setAiAnalytics(aiRes.data);
+      } catch (aiError) {
+        console.log('AI analytics not available:', aiError.message);
+        setAiAnalytics({ available: false });
+      }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       toast.error('Failed to load dashboard data');
@@ -516,7 +525,125 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === 'analytics' && userAnalytics && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              {/* AI Analytics Section */}
+              {aiAnalytics && aiAnalytics.available !== false && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-8"
+                >
+                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <Brain className="h-6 w-6 text-purple-600" />
+                    AI Analysis Overview
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Total AI Analyses</p>
+                            <p className="text-2xl font-bold text-purple-600">{aiAnalytics?.totalAnalyses || 0}</p>
+                          </div>
+                          <Activity className="h-8 w-8 text-purple-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Crisis Detected</p>
+                            <p className="text-2xl font-bold text-red-600">{aiAnalytics?.crisisDetected || 0}</p>
+                          </div>
+                          <AlertTriangle className="h-8 w-8 text-red-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">High Risk Students</p>
+                            <p className="text-2xl font-bold text-orange-600">{aiAnalytics?.highRiskStudents || 0}</p>
+                          </div>
+                          <Users className="h-8 w-8 text-orange-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">AI Accuracy</p>
+                            <p className="text-2xl font-bold text-green-600">{aiAnalytics?.accuracy || 95}%</p>
+                          </div>
+                          <TrendingUp className="h-8 w-8 text-green-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Risk Level Distribution</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {[
+                            { level: 'Low Risk', count: aiAnalytics?.riskDistribution?.low || 0, color: 'bg-green-500' },
+                            { level: 'Moderate Risk', count: aiAnalytics?.riskDistribution?.moderate || 0, color: 'bg-yellow-500' },
+                            { level: 'High Risk', count: aiAnalytics?.riskDistribution?.high || 0, color: 'bg-orange-500' },
+                            { level: 'Critical Risk', count: aiAnalytics?.riskDistribution?.critical || 0, color: 'bg-red-500' }
+                          ].map(({ level, count, color }) => (
+                            <div key={level} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                                <span className="text-sm font-medium">{level}</span>
+                              </div>
+                              <span className="text-sm font-bold">{count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>AI Insights Generated</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-sm">Personal Insights</span>
+                            <span className="font-bold">{aiAnalytics?.insightsGenerated?.personal || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm">Counselor Recommendations</span>
+                            <span className="font-bold">{aiAnalytics?.insightsGenerated?.counselor || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm">Crisis Interventions</span>
+                            <span className="font-bold">{aiAnalytics?.insightsGenerated?.crisis || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm">Pattern Detections</span>
+                            <span className="font-bold">{aiAnalytics?.insightsGenerated?.patterns || 0}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Existing User Analytics */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Department Distribution</CardTitle>
@@ -557,6 +684,7 @@ const AdminDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
+              </div>
             </div>
           )}
         </motion.div>

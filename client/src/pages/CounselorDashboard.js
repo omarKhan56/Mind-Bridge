@@ -5,6 +5,7 @@ import { Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle, Eye } from
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import CounselorAIInsights from '../components/CounselorAIInsights';
 import { 
   BarChart, 
   Bar, 
@@ -44,6 +45,7 @@ const CounselorDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
 
   // Chart colors
   const COLORS = {
@@ -221,6 +223,16 @@ const CounselorDashboard = () => {
               }`}
             >
               Students
+            </button>
+            <button
+              onClick={() => setActiveTab('ai-insights')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'ai-insights'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              AI Insights
             </button>
           </nav>
         </div>
@@ -606,6 +618,57 @@ const CounselorDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* AI Insights Tab */}
+        {activeTab === 'ai-insights' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  AI-Powered Student Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Student Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Student for AI Analysis
+                  </label>
+                  <select 
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    onChange={(e) => setSelectedStudentId(e.target.value)}
+                    value={selectedStudentId || ''}
+                  >
+                    <option value="">Choose a student...</option>
+                    {students.map(student => (
+                      <option key={student._id} value={student._id}>
+                        {student.name} - {student.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* AI Insights Component */}
+                {selectedStudentId && (
+                  <CounselorAIInsights studentId={selectedStudentId} />
+                )}
+                
+                {!selectedStudentId && (
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Select a student to view AI-powered insights and analysis</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
