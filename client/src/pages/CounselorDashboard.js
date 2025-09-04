@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle, Eye } from 'lucide-react';
+import { Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle, Eye, TrendingUp, Brain, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import CounselorAIInsights from '../components/CounselorAIInsights';
+import analyticsService from '../services/analyticsService';
 import { 
   BarChart, 
   Bar, 
@@ -48,6 +50,11 @@ const CounselorDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [crisisAlerts, setCrisisAlerts] = useState([]);
+  
+  // New analytics state
+  const [dashboardData, setDashboardData] = useState(null);
+  const [trends, setTrends] = useState(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('30d');
   const [socket, setSocket] = useState(null);
 
   // Chart colors
@@ -89,6 +96,7 @@ const CounselorDashboard = () => {
 
   useEffect(() => {
     fetchData();
+    loadAnalyticsData();
     
     // Setup crisis alert socket connection for counselors
     if (user && user.role === 'counselor') {
@@ -162,6 +170,20 @@ const CounselorDashboard = () => {
     }
   };
 
+  const loadAnalyticsData = async () => {
+    try {
+      const [dashboardRes, trendsRes] = await Promise.all([
+        analyticsService.getDashboardAnalytics().catch(() => null),
+        analyticsService.getTrends(selectedTimeframe).catch(() => null)
+      ]);
+      
+      setDashboardData(dashboardRes);
+      setTrends(trendsRes);
+    } catch (error) {
+      console.error('Analytics data load failed:', error);
+    }
+  };
+
   const handleAppointmentAction = async (appointmentId, action) => {
     try {
       const token = localStorage.getItem('token');
@@ -197,6 +219,28 @@ const CounselorDashboard = () => {
     return <Badge className={config.color}>{config.label}</Badge>;
   };
 
+  const getRiskLevelColor = (level) => {
+    const colors = {
+      critical: 'bg-red-500',
+      high: 'bg-orange-500',
+      moderate: 'bg-yellow-500',
+      low: 'bg-blue-500',
+      minimal: 'bg-green-500'
+    };
+    return colors[level] || 'bg-gray-500';
+  };
+
+  const getRiskLevelText = (level) => {
+    const texts = {
+      critical: 'Critical Risk',
+      high: 'High Risk',
+      moderate: 'Moderate Risk',
+      low: 'Low Risk',
+      minimal: 'Minimal Risk'
+    };
+    return texts[level] || 'Unknown';
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -225,6 +269,106 @@ const CounselorDashboard = () => {
           <StatCard icon={CheckCircle} title="Completed Today" value={analytics?.completedToday || 0} color="text-green-500" />
           <StatCard icon={AlertTriangle} title="High-Risk Students" value={analytics?.highRiskStudents || 0} color="text-red-500" />
         </motion.div>
+
+        {/* Enhanced Analytics Section */}
+        {dashboardData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mt-8"
+          >
+            {/* Risk Distribution Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              {Object.entries(dashboardData.riskDistribution).map(([level, count]) => (
+                <Card key={level}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-3 h-3 rounded-full ${getRiskLevelColor(level)}`}></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">{getRiskLevelText(level)}</p>
+                        <p className="text-2xl font-bold text-gray-900">{count}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* High Risk Alert */}
+            {dashboardData.highRiskUsers && dashboardData.highRiskUsers.length > 0 && (
+              <Alert className="border-red-200 bg-red-50 mb-6">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  <strong>{dashboardData.highRiskUsers.length} students</strong> require immediate attention due to high risk scores.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* High Risk Students and Analytics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <span>High Risk Students</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {dashboardData.highRiskUsers?.slice(0, 5).map((student, index) => (
+                      <div key={student.userId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900">Student #{student.userId.slice(-6)}</p>
+                          <p className="text-sm text-gray-600">Risk Score: {student.riskScore}</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {student.factors?.slice(0, 3).map(factor => (
+                              <Badge key={factor} variant="secondary" className="text-xs">
+                                {factor.replace('_', ' ')}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <Badge variant={student.riskLevel === 'critical' ? 'destructive' : 'secondary'}>
+                          {student.riskLevel}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <TrendingUp className="h-5 w-5 text-blue-500" />
+                    <span>Predictive Analytics</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Average Risk Score</span>
+                      <span className="font-semibold">{dashboardData.trends?.averageRiskScore?.toFixed(1) || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Total Alerts</span>
+                      <span className="font-semibold">{dashboardData.trends?.totalAlerts || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Active Students</span>
+                      <span className="font-semibold">{dashboardData.totalUsers || 0}</span>
+                    </div>
+                    <Button className="w-full mt-4" variant="outline">
+                      <Brain className="h-4 w-4 mr-2" />
+                      View Detailed Analytics
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
+        )}
 
         {/* Crisis Alerts Section */}
         {crisisAlerts.length > 0 && (

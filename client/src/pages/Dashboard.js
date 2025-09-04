@@ -10,7 +10,9 @@ import { Progress } from '../components/ui/progress';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import WellnessTracker from '../components/WellnessTracker';
 import WellnessButton from '../components/WellnessButton';
+import WellnessRecommendations from '../components/WellnessRecommendations';
 import AIInsights from '../components/AIInsights';
+import analyticsService from '../services/analyticsService';
 import { 
   LineChart, 
   Line, 
@@ -852,6 +854,16 @@ const Dashboard = () => {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Wellness Recommendations Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 1.2 }}
+        className="mt-8"
+      >
+        <WellnessRecommendations />
+      </motion.div>
 
       {/* Wellness Tracker Modal */}
       <WellnessTracker 
