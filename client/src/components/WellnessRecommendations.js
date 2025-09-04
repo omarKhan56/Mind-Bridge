@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
-import { Heart, Target, Lightbulb, CheckCircle, Clock, Star } from '../components/Icons';
+import { Heart, Target, Sparkles, Check, Clock, Award } from '../components/Icons';
 import analyticsService from '../services/analyticsService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -56,11 +56,11 @@ const WellnessRecommendations = () => {
       crisis_support: <Heart className="h-4 w-4 text-red-500" />,
       mood_support: <Heart className="h-4 w-4 text-blue-500" />,
       academic_support: <Target className="h-4 w-4 text-green-500" />,
-      social_connection: <Star className="h-4 w-4 text-purple-500" />,
+      social_connection: <Award className="h-4 w-4 text-purple-500" />,
       sleep_improvement: <Clock className="h-4 w-4 text-indigo-500" />,
-      engagement_boost: <Lightbulb className="h-4 w-4 text-yellow-500" />
+      engagement_boost: <Sparkles className="h-4 w-4 text-yellow-500" />
     };
-    return icons[type] || <Lightbulb className="h-4 w-4 text-gray-500" />;
+    return icons[type] || <Sparkles className="h-4 w-4 text-gray-500" />;
   };
 
   if (loading) {
@@ -195,7 +195,7 @@ const WellnessRecommendations = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Star className="h-5 w-5 text-yellow-500" />
+              <Award className="h-5 w-5 text-yellow-500" />
               <span>Your Wellness Goals</span>
             </CardTitle>
             <CardDescription>Personalized goals to track your progress</CardDescription>
@@ -234,7 +234,7 @@ const WellnessRecommendations = () => {
                     >
                       {completedGoals.has(`goal-${index}`) ? (
                         <>
-                          <CheckCircle className="h-4 w-4 mr-1" />
+                          <Check className="h-4 w-4 mr-1" />
                           Done
                         </>
                       ) : (
@@ -254,7 +254,7 @@ const WellnessRecommendations = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Lightbulb className="h-5 w-5 text-green-500" />
+              <Sparkles className="h-5 w-5 text-green-500" />
               <span>Long-term Wellness</span>
             </CardTitle>
             <CardDescription>Building lasting habits for sustained wellbeing</CardDescription>
