@@ -20,6 +20,7 @@ const counselorRoutes = require('./routes/counselor');
 const adminRoutes = require('./routes/admin');
 const wellnessRoutes = require('./routes/wellness');
 const aiAnalysisRoutes = require('./routes/aiAnalysis');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 const server = http.createServer(app);
@@ -46,6 +47,7 @@ app.use('/api/counselor', counselorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/wellness', wellnessRoutes);
 app.use('/api/ai-analysis', aiAnalysisRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Test endpoint for AI service
 app.post('/api/test-ai', async (req, res) => {
