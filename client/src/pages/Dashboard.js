@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { Brain, Heart, Users, Shield, MessageCircle, Calendar, BookOpen, TrendingUp, Bell, Target, Activity, User } from '../components/Icons';
+import { Brain, Heart, Users, Shield, MessageCircle, Calendar, BookOpen, TrendingUp, Bell, Target, Activity, User, Sparkles, Award, Plus } from '../components/Icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -515,29 +515,48 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-12">
-        {/* Header */}
-        <div className="text-center lg:text-left space-y-4 mb-8">
-          <motion.div
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Enhanced Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="py-6"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              {getWelcomeMessage()}
-            </h1>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <Avatar className="h-16 w-16 ring-4 ring-blue-100">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-bold">
+                      {user?.name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <Heart className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                    {getWelcomeMessage()} 👋
+                  </h1>
+                  <p className="text-gray-600 mt-1">How are you feeling today? Let's check in on your wellness journey.</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Button variant="outline" size="sm" className="hidden sm:flex">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Notifications
+                </Button>
+                <WellnessButton onOpenTracker={() => setShowWellnessTracker(true)} />
+              </div>
+            </div>
           </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="flex flex-wrap items-center justify-center lg:justify-start gap-3"
-          >
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-gray-700">
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {analysis?.overview.totalSessions || 0} sessions
               </span>
             </div>
