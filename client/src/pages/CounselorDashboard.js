@@ -97,7 +97,9 @@ const CounselorDashboard = () => {
   useEffect(() => {
     fetchData();
     loadAnalyticsData();
-    
+  }, [selectedTimeframe]);
+
+  useEffect(() => {
     // Setup crisis alert socket connection for counselors
     if (user && user.role === 'counselor') {
       const newSocket = io('http://localhost:5001', {
