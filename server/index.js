@@ -73,6 +73,20 @@ io.on('connection', (socket) => {
     console.log(`🏠 User ${userId} joined chat room`);
   });
 
+  // Counselor joins college-specific room for crisis alerts
+  socket.on('join-counselor-room', async (userId) => {
+    try {
+      const user = await User.findById(userId).populate('college');
+      if (user && user.role === 'counselor' && user.college) {
+        socket.join(`user_${userId}`);
+        socket.join(`college_${user.college._id}_counselors`);
+        console.log(`👨‍⚕️ Counselor ${user.name} joined ${user.college.name} crisis alert room`);
+      }
+    } catch (error) {
+      console.error('Error joining counselor room:', error);
+    }
+  });
+
   socket.on('user-message', async (data) => {
     console.log('📨 Received user message:', data.message?.substring(0, 50) + '...');
     console.log('📊 Message data:', { userId: data.userId, sessionId: data.sessionId, hasMessage: !!data.message });
@@ -185,6 +199,7 @@ io.on('connection', (socket) => {
       
       try {
         const sentiment = await sentimentAnalyzer.analyzeChatSentiment([{ content: message }]);
+        console.log('🔍 Sentiment analysis result:', JSON.stringify(sentiment, null, 2));
         
         // Check for crisis indicators
         if (sentiment.crisisIndicators?.present && sentiment.crisisIndicators.confidence > 0.7) {
@@ -203,16 +218,81 @@ io.on('connection', (socket) => {
             }
           });
           
-          // Emit alert to counselors (if any are connected)
-          io.emit('crisis_alert', {
-            userId,
-            message: 'Crisis indicator detected',
-            urgency: sentiment.urgencyLevel,
-            timestamp: new Date()
-          });
+          // Get user's college and alert counselors from same college
+          const user = await User.findById(userId).populate('college');
+          if (user && user.college) {
+            // Emit alert to all counselors in the college room
+            io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', {
+              userId,
+              studentName: user.name,
+              studentEmail: user.email,
+              collegeName: user.college.name,
+              message: 'Crisis indicator detected',
+              urgency: sentiment.urgencyLevel,
+              timestamp: new Date(),
+              detectionMethod: 'ai-analysis'
+            });
+            
+            console.log(`🚨 Crisis alert sent to counselors at ${user.college.name}`);
+          }
         }
+        
+        // Fallback crisis detection using keywords
+        const crisisKeywords = ['kill myself', 'suicide', 'end it all', 'want to die', 'hurt myself', 'end my life'];
+        const messageText = message.toLowerCase();
+        const hasCrisisKeywords = crisisKeywords.some(keyword => messageText.includes(keyword));
+        
+        if (hasCrisisKeywords) {
+          console.log(`🚨 FALLBACK: Crisis keywords detected for user ${userId}`);
+          
+          // Get user's college and alert counselors from same college
+          const user = await User.findById(userId).populate('college');
+          if (user && user.college) {
+            // Emit alert to all counselors in the college room
+            io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', {
+              userId,
+              studentName: user.name,
+              studentEmail: user.email,
+              collegeName: user.college.name,
+              message: 'Crisis keywords detected in message',
+              urgency: 5,
+              timestamp: new Date(),
+              detectionMethod: 'keyword-fallback'
+            });
+            
+            console.log(`🚨 Fallback crisis alert sent to counselors at ${user.college.name}`);
+          }
+        }
+        
       } catch (sentimentError) {
         console.log('⚠️ Sentiment analysis failed (non-critical):', sentimentError.message);
+        
+        // Emergency fallback crisis detection
+        const crisisKeywords = ['kill myself', 'suicide', 'end it all', 'want to die', 'hurt myself'];
+        const messageText = message.toLowerCase();
+        const hasCrisisKeywords = crisisKeywords.some(keyword => messageText.includes(keyword));
+        
+        if (hasCrisisKeywords) {
+          console.log(`🚨 EMERGENCY FALLBACK: Crisis keywords detected for user ${userId}`);
+          
+          // Get user's college and alert counselors from same college
+          const user = await User.findById(userId).populate('college');
+          if (user && user.college) {
+            // Emit alert to all counselors in the college room
+            io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', {
+              userId,
+              studentName: user.name,
+              studentEmail: user.email,
+              collegeName: user.college.name,
+              message: 'Crisis keywords detected (emergency fallback)',
+              urgency: 5,
+              timestamp: new Date(),
+              detectionMethod: 'emergency-fallback'
+            });
+            
+            console.log(`🚨 Emergency crisis alert sent to counselors at ${user.college.name}`);
+          }
+        }
       }
 
       // Send event to Inngest for processing (non-blocking)
@@ -255,11 +335,25 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mindbridg
       try {
         const existingCounselor = await User.findOne({ email: 'counselor@example.com' });
         if (!existingCounselor) {
+          // Create demo college if it doesn't exist
+          const College = require('./models/College');
+          let demoCollege = await College.findOne({ code: 'DEMO' });
+          if (!demoCollege) {
+            demoCollege = new College({
+              name: 'Demo University',
+              code: 'DEMO',
+              address: '123 Demo Street, Demo City',
+              contactEmail: 'admin@demo.edu'
+            });
+            await demoCollege.save();
+          }
+
           const counselor = new User({
             name: 'Dr. Alex Chen',
             email: 'counselor@example.com',
             password: 'password123', // This will be hashed by the pre-save hook
             role: 'counselor',
+            college: demoCollege._id,
             department: 'Psychology'
           });
           await counselor.save();

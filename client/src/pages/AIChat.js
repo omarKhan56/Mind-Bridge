@@ -82,6 +82,42 @@ const AIChat = () => {
       });
     });
 
+    // Listen for crisis alerts
+    newSocket.on('crisis_alert', (data) => {
+      console.log('🚨 Crisis alert received:', data);
+      
+      // Show immediate crisis alert notification
+      if (window.Notification && Notification.permission === 'granted') {
+        new Notification('Crisis Alert Detected', {
+          body: 'Crisis language detected. Help resources are available.',
+          icon: '/favicon.ico',
+          tag: 'crisis-alert'
+        });
+      }
+      
+      // Add crisis alert message to chat
+      setMessages(prev => [...prev, {
+        id: Date.now() + Math.random(),
+        text: `🚨 **Crisis Support Alert**: I've detected that you might be going through a difficult time. Please know that help is available 24/7:
+
+**Immediate Help:**
+• National Suicide Prevention Lifeline: 988
+• Crisis Text Line: Text HOME to 741741
+• Emergency Services: 911
+
+**You are not alone. Your life has value and meaning.**`,
+        sender: 'system',
+        timestamp: new Date(),
+        isAlert: true,
+        alertType: 'crisis'
+      }]);
+    });
+
+    // Request notification permission
+    if (window.Notification && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     return () => {
       console.log('🔌 Cleaning up socket connection');
       newSocket.close();
@@ -646,8 +682,12 @@ const AIChat = () => {
                                 <motion.div
                                   whileHover={{ scale: 1.02 }}
                                   className={`p-4 rounded-2xl shadow-sm ${
-                                    message.sender === 'user'
+                                    message.isAlert && message.alertType === 'crisis'
+                                      ? 'bg-red-50 border-2 border-red-200 text-red-800'
+                                      : message.sender === 'user'
                                       ? 'bg-blue-500 text-white rounded-br-md'
+                                      : message.sender === 'system'
+                                      ? 'bg-yellow-50 border border-yellow-200 text-yellow-800'
                                       : 'bg-white border border-gray-200 rounded-bl-md'
                                   }`}
                                 >

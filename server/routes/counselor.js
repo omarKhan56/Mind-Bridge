@@ -29,12 +29,12 @@ const counselorAuth = async (req, res, next) => {
     
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
     
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId).populate('college');
     if (!user || user.role !== 'counselor') {
       return res.status(403).json({ message: 'Counselor access required' });
     }
     
-    req.user = decoded;
+    req.user = { ...decoded, collegeId: user.college?._id, collegeName: user.college?.name };
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token is not valid' });
@@ -123,15 +123,13 @@ router.delete('/students/:id', counselorAuth, async (req, res) => {
 
 router.get('/students', counselorAuth, async (req, res) => {
   try {
-    // Get counselor's college
-    const counselor = await User.findById(req.user.userId);
-    if (!counselor || !counselor.college) {
+    if (!req.user.collegeId) {
       return res.status(400).json({ message: 'Counselor must be associated with a college' });
     }
     
     const students = await User.find({ 
       role: 'student',
-      college: counselor.college
+      college: req.user.collegeId
     }).populate('college', 'name code');
     
     res.json(students);
@@ -143,9 +141,25 @@ router.get('/students', counselorAuth, async (req, res) => {
 // Appointment Management
 router.get('/appointments', counselorAuth, async (req, res) => {
   try {
-    const appointments = await Appointment.find()
-      .populate('student', 'name email department year')
+    if (!req.user.collegeId) {
+      return res.status(400).json({ message: 'Counselor must be associated with a college' });
+    }
+    
+    // Find students from the same college
+    const collegeStudents = await User.find({ 
+      role: 'student',
+      college: req.user.collegeId
+    }).select('_id');
+    
+    const studentIds = collegeStudents.map(student => student._id);
+    
+    const appointments = await Appointment.find({
+      student: { $in: studentIds }
+    })
+      .populate('student', 'name email department year college')
+      .populate('counselor', 'name')
       .sort({ appointmentDate: 1 });
+    
     res.json(appointments);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -246,34 +260,38 @@ router.patch('/appointments/:id/reschedule', counselorAuth, async (req, res) => 
 // Dashboard Analytics
 router.get('/analytics', counselorAuth, async (req, res) => {
   try {
-    // Get counselor's college
-    const counselor = await User.findById(req.user.userId);
-    if (!counselor || !counselor.college) {
+    // College info is now available from auth middleware
+    if (!req.user.collegeId) {
       return res.status(400).json({ message: 'Counselor must be associated with a college' });
     }
     
-    const totalStudents = await User.countDocuments({ 
+    // Get students from the same college
+    const collegeStudents = await User.find({ 
       role: 'student',
-      college: counselor.college
+      college: req.user.collegeId
     });
     
+    const studentIds = collegeStudents.map(student => student._id);
+    
+    const totalStudents = collegeStudents.length;
+    
     const pendingAppointments = await Appointment.countDocuments({ 
-      counselor: req.user.userId,
+      student: { $in: studentIds },
       status: 'pending' 
     });
     
-    const highRiskStudents = await User.countDocuments({ 
-      role: 'student',
-      college: counselor.college,
-      'screeningData.riskLevel': 'high' 
-    });
+    const highRiskStudents = collegeStudents.filter(student => 
+      student.screeningData?.riskLevel === 'high' || 
+      student.aiAnalysis?.riskLevel === 'high' || 
+      student.aiAnalysis?.riskLevel === 'critical'
+    ).length;
     
     const totalAppointments = await Appointment.countDocuments({
-      counselor: req.user.userId
+      student: { $in: studentIds }
     });
     
     const completedAppointments = await Appointment.countDocuments({
-      counselor: req.user.userId,
+      student: { $in: studentIds },
       status: 'completed'
     });
     
@@ -284,10 +302,38 @@ router.get('/analytics', counselorAuth, async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     
     const completedToday = await Appointment.countDocuments({
-      counselor: req.user.userId,
+      student: { $in: studentIds },
       status: 'completed',
       updatedAt: { $gte: today, $lt: tomorrow }
     });
+    
+    // AI Analysis Summary
+    const aiAnalysisSummary = {
+      totalAnalyzed: collegeStudents.filter(s => s.aiAnalysis?.lastAnalysis).length,
+      riskDistribution: {
+        low: collegeStudents.filter(s => s.aiAnalysis?.riskLevel === 'low').length,
+        moderate: collegeStudents.filter(s => s.aiAnalysis?.riskLevel === 'moderate').length,
+        high: collegeStudents.filter(s => s.aiAnalysis?.riskLevel === 'high').length,
+        critical: collegeStudents.filter(s => s.aiAnalysis?.riskLevel === 'critical').length
+      },
+      trendAnalysis: {
+        improving: collegeStudents.filter(s => s.aiAnalysis?.trend === 'improving').length,
+        stable: collegeStudents.filter(s => s.aiAnalysis?.trend === 'stable').length,
+        declining: collegeStudents.filter(s => s.aiAnalysis?.trend === 'declining').length
+      },
+      averageSentiment: totalStudents > 0 ? collegeStudents.reduce((acc, s) => {
+        return acc + (s.aiAnalysis?.sentiment || 5);
+      }, 0) / totalStudents : 5
+    };
+    
+    // Recent alerts for college students
+    const recentAlerts = collegeStudents.reduce((acc, student) => {
+      if (student.alerts && student.alerts.length > 0) {
+        const unacknowledgedAlerts = student.alerts.filter(alert => !alert.acknowledged);
+        return acc + unacknowledgedAlerts.length;
+      }
+      return acc;
+    }, 0);
     
     res.json({
       totalStudents,
@@ -295,7 +341,10 @@ router.get('/analytics', counselorAuth, async (req, res) => {
       highRiskStudents,
       completedToday,
       totalAppointments,
-      completedAppointments
+      completedAppointments,
+      aiAnalysisSummary,
+      recentAlerts,
+      collegeName: req.user.collegeName || 'Unknown College'
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -305,8 +354,23 @@ router.get('/analytics', counselorAuth, async (req, res) => {
 // Alert Management
 router.get('/alerts', counselorAuth, async (req, res) => {
   try {
-    const alerts = await Alert.find({ isResolved: false })
-      .populate('student', 'name studentId email')
+    if (!req.user.collegeId) {
+      return res.status(400).json({ message: 'Counselor must be associated with a college' });
+    }
+    
+    // Get students from the same college
+    const collegeStudents = await User.find({ 
+      role: 'student',
+      college: req.user.collegeId
+    }).select('_id');
+    
+    const studentIds = collegeStudents.map(student => student._id);
+    
+    const alerts = await Alert.find({ 
+      student: { $in: studentIds },
+      isResolved: false 
+    })
+      .populate('student', 'name studentId email college')
       .sort({ priority: -1, createdAt: -1 });
     
     res.json(alerts);

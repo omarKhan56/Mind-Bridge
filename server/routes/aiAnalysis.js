@@ -233,10 +233,10 @@ router.post('/batch-analyze', auth, async (req, res) => {
 });
 
 // Admin analytics endpoint
-router.get('/admin/analytics', async (req, res) => {
+router.get('/admin/analytics', auth, async (req, res) => {
   try {
     // Check if user is admin
-    if (req.user.role !== 'admin') {
+    if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
 

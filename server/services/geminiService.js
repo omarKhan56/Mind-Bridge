@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+require('dotenv').config();
 
 class GeminiService {
   constructor() {
@@ -36,16 +37,47 @@ class GeminiService {
     }
 
     try {
+      // Input validation
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return this.getEnhancedFallback('I need help', userContext);
+      }
+
+      // Rate limiting - simple implementation
+      const now = Date.now();
+      if (this.lastRequest && (now - this.lastRequest) < 1000) {
+        console.log('⚠️ Rate limiting - using fallback');
+        return this.getEnhancedFallback(message, userContext);
+      }
+      this.lastRequest = now;
+
       const prompt = this.buildPrompt(message, userContext);
       
-      const result = await this.model.generateContent(prompt);
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Gemini API timeout')), 8000)
+      );
+      
+      const apiPromise = this.model.generateContent(prompt);
+      const result = await Promise.race([apiPromise, timeoutPromise]);
       const response = await result.response;
       const text = response.text();
+      
+      // Validate response
+      if (!text || text.trim().length === 0) {
+        console.log('⚠️ Empty Gemini response, using fallback');
+        return this.getEnhancedFallback(message, userContext);
+      }
       
       console.log('✅ Gemini AI response generated');
       return text;
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.error('Gemini API error:', error.message);
+      // Enhanced error logging
+      if (error.message.includes('quota')) {
+        console.log('⚠️ Gemini API quota exceeded - using fallback');
+      } else if (error.message.includes('timeout')) {
+        console.log('⚠️ Gemini API timeout - using fallback');
+      }
       return this.getEnhancedFallback(message, userContext);
     }
   }

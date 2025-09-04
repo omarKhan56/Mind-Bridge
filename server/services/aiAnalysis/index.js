@@ -66,24 +66,38 @@ class AIAnalysisService {
   }
 
   async collectUserData(userId) {
-    const [user, aiSessions, wellnessEntries, appointments, forumPosts] = await Promise.all([
-      User.findById(userId).populate('college'),
-      AISession.find({ user: userId }).sort({ createdAt: -1 }).limit(50),
-      WellnessEntry.find({ user: userId }).sort({ date: -1 }).limit(30),
-      Appointment.find({ student: userId }).sort({ createdAt: -1 }).limit(20),
-      ForumPost.find({ author: userId }).sort({ createdAt: -1 }).limit(20)
-    ]);
+    try {
+      // Validate userId
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
 
-    return {
-      userId,
-      user,
-      aiSessions,
-      wellnessEntries,
-      appointments,
-      forumPosts,
-      usagePatterns: await this.calculateUsagePatterns(userId),
-      screeningData: user?.screeningData
-    };
+      const [user, aiSessions, wellnessEntries, appointments, forumPosts] = await Promise.all([
+        User.findById(userId).populate('college'),
+        AISession.find({ user: userId }).sort({ createdAt: -1 }).limit(50),
+        WellnessEntry.find({ user: userId }).sort({ date: -1 }).limit(30),
+        Appointment.find({ student: userId }).sort({ createdAt: -1 }).limit(20),
+        ForumPost.find({ author: userId }).sort({ createdAt: -1 }).limit(20).catch(() => [])
+      ]);
+
+      if (!user) {
+        throw new Error(`User ${userId} not found`);
+      }
+
+      return {
+        userId,
+        user,
+        aiSessions: aiSessions || [],
+        wellnessEntries: wellnessEntries || [],
+        appointments: appointments || [],
+        forumPosts: forumPosts || [],
+        usagePatterns: await this.calculateUsagePatterns(userId),
+        screeningData: user?.screeningData || {}
+      };
+    } catch (error) {
+      console.error(`Error collecting data for user ${userId}:`, error.message);
+      throw error;
+    }
   }
 
   async calculateUsagePatterns(userId) {

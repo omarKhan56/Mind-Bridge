@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 import { Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -46,6 +47,8 @@ const CounselorDashboard = () => {
   const [alerts, setAlerts] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [crisisAlerts, setCrisisAlerts] = useState([]);
+  const [socket, setSocket] = useState(null);
 
   // Chart colors
   const COLORS = {
@@ -86,7 +89,54 @@ const CounselorDashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    
+    // Setup crisis alert socket connection for counselors
+    if (user && user.role === 'counselor') {
+      const newSocket = io('http://localhost:5001', {
+        transports: ['websocket', 'polling'],
+        timeout: 10000
+      });
+      
+      setSocket(newSocket);
+      
+      newSocket.on('connect', () => {
+        console.log('✅ Counselor connected to crisis alert system');
+        // Join counselor room for crisis alerts
+        newSocket.emit('join-counselor-room', user.id);
+      });
+      
+      newSocket.on('crisis_alert', (alertData) => {
+        console.log('🚨 Crisis alert received:', alertData);
+        
+        // Add to crisis alerts list
+        setCrisisAlerts(prev => [alertData, ...prev.slice(0, 9)]); // Keep last 10 alerts
+        
+        // Show browser notification
+        if (window.Notification && Notification.permission === 'granted') {
+          new Notification('🚨 Crisis Alert', {
+            body: `${alertData.studentName} needs immediate attention`,
+            icon: '/favicon.ico',
+            tag: 'crisis-alert'
+          });
+        }
+        
+        // Play alert sound (optional)
+        try {
+          const audio = new Audio('/alert-sound.mp3');
+          audio.play().catch(() => {}); // Ignore if sound fails
+        } catch (e) {}
+      });
+      
+      // Request notification permission
+      if (window.Notification && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      
+      return () => {
+        newSocket.close();
+      };
+    }
+  }, [user]);
 
   const fetchData = async () => {
     try {
@@ -175,6 +225,76 @@ const CounselorDashboard = () => {
           <StatCard icon={CheckCircle} title="Completed Today" value={analytics?.completedToday || 0} color="text-green-500" />
           <StatCard icon={AlertTriangle} title="High-Risk Students" value={analytics?.highRiskStudents || 0} color="text-red-500" />
         </motion.div>
+
+        {/* Crisis Alerts Section */}
+        {crisisAlerts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="mt-8"
+          >
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-red-800 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Crisis Alerts ({crisisAlerts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {crisisAlerts.map((alert, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-white p-4 rounded-lg border border-red-200 shadow-sm"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="destructive" className="text-xs">
+                              URGENT
+                            </Badge>
+                            <span className="text-sm font-medium text-gray-900">
+                              {alert.studentName}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {alert.collegeName}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mb-2">
+                            {alert.message}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span>
+                              {new Date(alert.timestamp).toLocaleString()}
+                            </span>
+                            <span>
+                              Method: {alert.detectionMethod}
+                            </span>
+                            <span>
+                              Urgency: {alert.urgency}/5
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 ml-4">
+                          <Button size="sm" variant="outline" className="text-xs">
+                            Contact
+                          </Button>
+                          <Button size="sm" className="text-xs bg-red-600 hover:bg-red-700">
+                            Respond
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Tab Navigation */}
         <div className="mt-8 border-b border-gray-200">

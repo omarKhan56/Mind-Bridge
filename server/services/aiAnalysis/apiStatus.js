@@ -1,73 +1,93 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+require('dotenv').config();
 
-class APIStatusChecker {
+class APIStatusService {
   constructor() {
-    this.geminiAvailable = false;
-    this.lastCheck = null;
-    this.checkInterval = 5 * 60 * 1000; // 5 minutes
+    this.status = {
+      geminiAvailable: false,
+      lastChecked: null,
+      capabilities: {
+        chatCompletion: false,
+        sentimentAnalysis: false,
+        riskPrediction: true // Always available with fallback
+      },
+      fallbackMode: true
+    };
+    this.checkInterval = null;
   }
 
-  async checkGeminiAPI() {
+  async checkGeminiStatus() {
     try {
-      if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your-google-gemini-api-key-here') {
-        this.geminiAvailable = false;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || apiKey === 'your-google-gemini-api-key-here') {
         return false;
       }
 
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        generationConfig: { maxOutputTokens: 10 }
+      });
       
-      // Simple test request
-      const result = await model.generateContent('Test');
-      await result.response;
+      // Simple test prompt with timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      );
       
-      this.geminiAvailable = true;
-      this.lastCheck = new Date();
-      return true;
+      const testPromise = model.generateContent('Hello');
+      const result = await Promise.race([testPromise, timeoutPromise]);
+      const response = await result.response;
+      
+      return response.text().length > 0;
     } catch (error) {
-      this.geminiAvailable = false;
-      this.lastCheck = new Date();
+      console.log('Gemini API status check failed:', error.message);
       return false;
     }
   }
 
-  async getStatus() {
-    // Check if we need to refresh status
-    if (!this.lastCheck || (Date.now() - this.lastCheck.getTime()) > this.checkInterval) {
-      await this.checkGeminiAPI();
-    }
-
-    return {
-      geminiAvailable: this.geminiAvailable,
-      lastCheck: this.lastCheck,
-      mode: this.geminiAvailable ? 'enhanced' : 'fallback',
-      capabilities: this.getCapabilities()
+  async updateStatus() {
+    const geminiAvailable = await this.checkGeminiStatus();
+    
+    this.status = {
+      geminiAvailable,
+      lastChecked: new Date(),
+      capabilities: {
+        chatCompletion: geminiAvailable,
+        sentimentAnalysis: geminiAvailable,
+        riskPrediction: true // Always available with fallback
+      },
+      fallbackMode: !geminiAvailable
     };
+    
+    return this.status;
   }
 
-  getCapabilities() {
-    if (this.geminiAvailable) {
-      return {
-        sentimentAnalysis: 'advanced',
-        crisisDetection: 'high-accuracy',
-        insightGeneration: 'personalized',
-        riskPrediction: 'enhanced',
-        patternDetection: 'complex'
-      };
-    } else {
-      return {
-        sentimentAnalysis: 'keyword-based',
-        crisisDetection: 'basic-keywords',
-        insightGeneration: 'template-based',
-        riskPrediction: 'mathematical',
-        patternDetection: 'statistical'
-      };
+  async getStatus() {
+    // Update status if it's never been checked or is older than 5 minutes
+    if (!this.status.lastChecked || 
+        (Date.now() - this.status.lastChecked.getTime()) > 300000) {
+      await this.updateStatus();
     }
+    
+    return this.status;
   }
 
-  isGeminiAvailable() {
-    return this.geminiAvailable;
+  startPeriodicCheck(intervalMs = 300000) { // 5 minutes
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval);
+    }
+    
+    this.checkInterval = setInterval(async () => {
+      await this.updateStatus();
+    }, intervalMs);
+  }
+
+  stopPeriodicCheck() {
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval);
+      this.checkInterval = null;
+    }
   }
 }
 
-module.exports = new APIStatusChecker();
+module.exports = new APIStatusService();
