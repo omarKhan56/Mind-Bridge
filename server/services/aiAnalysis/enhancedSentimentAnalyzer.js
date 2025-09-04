@@ -41,43 +41,53 @@ class EnhancedSentimentAnalyzer {
   }
 
   async getAIAnalysis(text, userId) {
-    const prompt = `Analyze this mental health conversation for:
-1. Overall sentiment (1-10 scale)
-2. Emotional state (primary and secondary emotions)
-3. Crisis indicators (present/absent, confidence 0-1)
-4. Urgency level (1-5)
-5. Key themes and concerns
-6. Recommended interventions
+    const prompt = `Analyze this mental health text and return ONLY valid JSON. No explanations, no markdown, just JSON:
 
-Text: "${text}"
+"${text}"
 
-Respond in JSON format:
-{
-  "overallSentiment": number,
-  "primaryEmotion": "string",
-  "secondaryEmotions": ["array"],
-  "crisisIndicators": {
-    "present": boolean,
-    "confidence": number,
-    "indicators": ["array"]
-  },
-  "urgencyLevel": number,
-  "keyThemes": ["array"],
-  "recommendedInterventions": ["array"],
-  "riskFactors": ["array"],
-  "protectiveFactors": ["array"]
-}`;
-
-    const response = await this.aiGateway.generateResponse(prompt, {
-      taskType: 'analysis',
-      userId
-    });
+JSON format:
+{"overallSentiment":5,"primaryEmotion":"anxiety","secondaryEmotions":["worry"],"crisisIndicators":{"present":false,"confidence":0.1,"indicators":[]},"urgencyLevel":2,"keyThemes":["stress"],"recommendedInterventions":["support"],"riskFactors":[],"protectiveFactors":[]}`;
 
     try {
-      const cleanText = response.text.replace(/```json\n?|\n?```/g, '').trim();
-      return JSON.parse(cleanText);
-    } catch (parseError) {
-      console.log('Gemini analysis JSON parse failed, using keyword analysis');
+      const response = await this.aiGateway.generateResponse(prompt, {
+        taskType: 'analysis',
+        userId
+      });
+
+      if (!response?.text) {
+        return null;
+      }
+
+      // Multiple cleaning attempts
+      let cleanText = response.text.trim();
+      
+      // Remove common prefixes/suffixes
+      cleanText = cleanText.replace(/^(Here's the analysis:|Analysis:|JSON:|```json|```)/i, '');
+      cleanText = cleanText.replace(/(```|Here's|Analysis)$/i, '');
+      
+      // Extract JSON object
+      const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanText = jsonMatch[0];
+      }
+      
+      // Fix common JSON issues
+      cleanText = cleanText.replace(/'/g, '"'); // Single to double quotes
+      cleanText = cleanText.replace(/,\s*}/g, '}'); // Remove trailing commas
+      cleanText = cleanText.replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+      
+      const parsed = JSON.parse(cleanText);
+      
+      // Validate required fields
+      if (typeof parsed.overallSentiment === 'number' && parsed.primaryEmotion) {
+        console.log('✅ Gemini JSON analysis successful');
+        return parsed;
+      }
+      
+      throw new Error('Invalid JSON structure');
+      
+    } catch (error) {
+      console.log('⚠️ Gemini parsing failed, using keyword fallback');
       return null;
     }
   }

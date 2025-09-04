@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 class AIGateway {
   constructor() {
@@ -10,22 +11,27 @@ class AIGateway {
   }
 
   initializeGemini() {
-    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your-google-gemini-api-key-here') {
+    const apiKey = process.env.GEMINI_API_KEY;
+    console.log('🔍 Gemini API Key check:', apiKey ? 'Present' : 'Missing');
+    
+    if (apiKey && apiKey !== 'your-google-gemini-api-key-here' && apiKey.length > 10) {
       try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const genAI = new GoogleGenerativeAI(apiKey);
         this.model = genAI.getGenerativeModel({ 
           model: 'gemini-1.5-flash',
           generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 200,
+            temperature: 0.3,
+            topK: 20,
+            topP: 0.8,
+            maxOutputTokens: 150,
           }
         });
-        console.log('✅ Gemini AI initialized');
+        console.log('✅ Gemini AI initialized successfully');
       } catch (error) {
         console.error('❌ Gemini initialization failed:', error.message);
       }
+    } else {
+      console.log('⚠️ Gemini API key not configured properly');
     }
   }
 

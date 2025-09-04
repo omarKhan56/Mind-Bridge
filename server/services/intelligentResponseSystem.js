@@ -14,6 +14,10 @@ class IntelligentResponseSystem {
       const userProfile = await this.getUserProfile(userId);
       const conversationHistory = this.getConversationHistory(userId);
       
+      // Check if this is the first message in a new session
+      const isFirstMessage = conversationHistory.length === 0 && 
+                             (!sessionContext.sessionId || sessionContext.isNewSession);
+      
       // Analyze current message context
       const messageContext = await this.analyzeMessageContext(message, userProfile);
       
@@ -23,7 +27,8 @@ class IntelligentResponseSystem {
         userProfile, 
         conversationHistory, 
         messageContext,
-        sessionContext
+        sessionContext,
+        isFirstMessage
       );
 
       // Update conversation memory
@@ -102,9 +107,9 @@ JSON response:
     }
   }
 
-  async generateContextualResponse(message, userProfile, history, messageContext, sessionContext) {
+  async generateContextualResponse(message, userProfile, history, messageContext, sessionContext, isFirstMessage = false) {
     // Build comprehensive context
-    const contextPrompt = this.buildContextPrompt(message, userProfile, history, messageContext, sessionContext);
+    const contextPrompt = this.buildContextPrompt(message, userProfile, history, messageContext, sessionContext, isFirstMessage);
     
     // Generate response with Gemini
     const response = await this.aiGateway.generateResponse(contextPrompt, {
@@ -113,13 +118,17 @@ JSON response:
     });
 
     // Enhance response with personalization
-    return this.personalizeResponse(response.text, userProfile, messageContext);
+    return this.personalizeResponse(response.text, userProfile, messageContext, isFirstMessage);
   }
 
-  buildContextPrompt(message, userProfile, history, messageContext, sessionContext) {
+  buildContextPrompt(message, userProfile, history, messageContext, sessionContext, isFirstMessage = false) {
     const historyText = history.length > 0 
       ? `Previous conversation:\n${history.map(h => `User: ${h.message}\nYou: ${h.response}`).join('\n')}\n\n`
       : '';
+
+    const greetingInstruction = isFirstMessage 
+      ? `This is the first message in a new session. Start with a brief, warm greeting introducing yourself as Dr. Sarah Chen, then respond to their message. Keep the greeting natural and brief (1-2 sentences max).`
+      : `This is a continuing conversation. Do not introduce yourself again. Respond directly to their message.`;
 
     const contextInfo = `
 User Profile:
@@ -140,8 +149,9 @@ ${historyText}Current message: "${message}"
 
 Instructions:
 - You are Dr. Sarah Chen, a warm and experienced mental health counselor
+- ${greetingInstruction}
 - Respond with empathy and understanding
-- Reference previous conversations when relevant
+- Reference previous conversations when relevant (but only if history exists)
 - Adapt your communication style to the user's needs
 - Provide practical, actionable advice when appropriate
 - If crisis indicators are present, prioritize safety and resources
@@ -151,11 +161,11 @@ Instructions:
     return contextInfo;
   }
 
-  personalizeResponse(responseText, userProfile, messageContext) {
+  personalizeResponse(responseText, userProfile, messageContext, isFirstMessage = false) {
     let personalizedResponse = responseText;
 
-    // Add personal touches
-    if (userProfile.name && userProfile.name !== 'there') {
+    // Add personal touches (but not for first message greeting)
+    if (userProfile.name && userProfile.name !== 'there' && !isFirstMessage) {
       personalizedResponse = personalizedResponse.replace(/\bthere\b/g, userProfile.name);
     }
 
@@ -164,8 +174,8 @@ Instructions:
       personalizedResponse += `\n\nI know ${userProfile.college} can be demanding, but remember that your campus counseling services are also available if you need additional support.`;
     }
 
-    // Add continuity references
-    if (userProfile.previousSessions > 0) {
+    // Add continuity references (only for non-first messages)
+    if (userProfile.previousSessions > 0 && !isFirstMessage) {
       const continuityPhrases = [
         "I'm glad you're continuing our conversations.",
         "It's good to hear from you again.",
@@ -182,6 +192,7 @@ Instructions:
       responseStyle: messageContext.responseStyle,
       urgencyLevel: messageContext.urgencyLevel,
       personalized: true,
+      isFirstMessage,
       timestamp: new Date()
     };
   }

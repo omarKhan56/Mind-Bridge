@@ -149,15 +149,33 @@ io.on('connection', (socket) => {
 
       console.log('🤖 Generating AI response...');
       
-      // Generate AI response with timeout
-      const responsePromise = geminiService.generateResponse(message, userContext);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Response timeout')), 8000)
-      );
-
-      const aiResponse = await Promise.race([responsePromise, timeoutPromise]);
+      // Enhanced AI response generation
+      const IntelligentResponseSystem = require('./services/intelligentResponseSystem');
+      const EnhancedSentimentAnalyzer = require('./services/aiAnalysis/enhancedSentimentAnalyzer');
       
-      console.log('✅ AI response generated:', aiResponse.substring(0, 50) + '...');
+      const intelligentResponse = new IntelligentResponseSystem();
+      const enhancedSentimentAnalyzer = new EnhancedSentimentAnalyzer();
+
+      // Check if this is a new session (no existing messages)
+      let isNewSession = false;
+      if (sessionId) {
+        try {
+          const existingSession = await AISession.findById(sessionId);
+          isNewSession = !existingSession || existingSession.messages.length === 0;
+        } catch (error) {
+          console.log('Could not check session status:', error.message);
+          isNewSession = true;
+        }
+      } else {
+        isNewSession = true;
+      }
+
+      // Generate personalized AI response
+      const aiResponse = await intelligentResponse.generatePersonalizedResponse(
+        message, 
+        userId, 
+        { sessionId, context, isNewSession }
+      );
 
       // Save AI response to session if sessionId provided
       if (sessionId) {
@@ -167,7 +185,7 @@ io.on('connection', (socket) => {
             $push: {
               messages: {
                 role: 'assistant',
-                content: aiResponse,
+                content: aiResponse.text,
                 timestamp: new Date()
               }
             }
@@ -184,28 +202,6 @@ io.on('connection', (socket) => {
       } else {
         console.log('⚠️ No sessionId provided for AI response, not saved');
       }
-      
-      // Send response back to user
-      socket.emit('ai-response', {
-        message: aiResponse,
-        timestamp: new Date(),
-        therapistName: "Dr. Sarah Chen",
-        responseType: "therapeutic"
-      });
-
-      // Enhanced AI response generation
-      const IntelligentResponseSystem = require('./services/intelligentResponseSystem');
-      const EnhancedSentimentAnalyzer = require('./services/aiAnalysis/enhancedSentimentAnalyzer');
-      
-      const intelligentResponse = new IntelligentResponseSystem();
-      const enhancedSentimentAnalyzer = new EnhancedSentimentAnalyzer();
-
-      // Generate personalized AI response
-      const aiResponse = await intelligentResponse.generatePersonalizedResponse(
-        message, 
-        userId, 
-        { sessionId, context }
-      );
 
       // Store the AI response
       const responseMessage = {
