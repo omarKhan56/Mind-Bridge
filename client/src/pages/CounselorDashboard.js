@@ -165,8 +165,6 @@ const CounselorDashboard = () => {
       newSocket.on('connect_error', (error) => {
         console.error('🔌 Socket connection error:', error);
       });
-        } catch (e) {}
-      });
       
       // Request notification permission
       if (window.Notification && Notification.permission === 'default') {
