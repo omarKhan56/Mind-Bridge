@@ -95,13 +95,23 @@ const CounselorDashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
-    loadAnalyticsData();
+    const loadData = async () => {
+      try {
+        await fetchData();
+        await loadAnalyticsData();
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      }
+    };
+    
+    loadData();
   }, [selectedTimeframe]);
 
   useEffect(() => {
     // Setup crisis alert socket connection for counselors
-    if (user && user.role === 'counselor') {
+    if (!user || user.role !== 'counselor') return;
+    
+    try {
       const newSocket = io('http://localhost:5001', {
         transports: ['websocket', 'polling'],
         timeout: 10000
@@ -174,8 +184,16 @@ const CounselorDashboard = () => {
       }
       
       return () => {
-        newSocket.close();
+        try {
+          if (newSocket) {
+            newSocket.close();
+          }
+        } catch (error) {
+          console.error('Error closing socket:', error);
+        }
       };
+    } catch (error) {
+      console.error('Error setting up socket:', error);
     }
   }, [user]);
 
