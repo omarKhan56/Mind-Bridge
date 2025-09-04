@@ -224,6 +224,20 @@ const CounselorDashboard = () => {
     }
   };
 
+  const loadAnalyticsData = async () => {
+    try {
+      const [dashboardRes, trendsRes] = await Promise.all([
+        analyticsService.getDashboardAnalytics().catch(() => null),
+        analyticsService.getTrends(selectedTimeframe).catch(() => null)
+      ]);
+      
+      setDashboardData(dashboardRes);
+      setTrends(trendsRes);
+    } catch (error) {
+      console.error('Analytics data load failed:', error);
+    }
+  };
+
   const handleAppointmentAction = async (appointmentId, action) => {
     try {
       const token = localStorage.getItem('token');
