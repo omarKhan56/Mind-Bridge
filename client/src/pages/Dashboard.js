@@ -724,80 +724,9 @@ const Dashboard = () => {
       />
     </div>
   );
-              <div className={`px-3 py-1 rounded-full border shadow-sm text-sm font-medium ${
-                analysis.progressIndicators.overallTrend === 'improving' 
-                  ? 'bg-green-50 border-green-200 text-green-700'
-                  : analysis.progressIndicators.overallTrend === 'declining'
-                  ? 'bg-red-50 border-red-200 text-red-700'
-                  : 'bg-blue-50 border-blue-200 text-blue-700'
-              }`}>
-                {analysis.progressIndicators.overallTrend === 'improving' ? '📈 Growing' : 
-                 analysis.progressIndicators.overallTrend === 'declining' ? '💙 Supported' : '✨ Steady'}
-              </div>
-            )}
-          </motion.div>
-        </div>
+};
 
-        {/* Quick Stats */}
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          {[
-            { 
-              icon: MessageCircle, 
-              label: "AI Sessions", 
-              value: analysis?.overview.totalSessions || 0, 
-              color: "from-blue-500 to-blue-600" 
-            },
-            { 
-              icon: Users, 
-              label: "Forum Posts", 
-              value: analysis?.overview.totalPosts || 0, 
-              color: "from-green-500 to-green-600" 
-            },
-            { 
-              icon: TrendingUp, 
-              label: "Progress", 
-              value: analysis?.progressIndicators?.overallTrend || "stable", 
-              color: analysis?.progressIndicators?.overallTrend === 'improving' ? 
-                     "from-green-500 to-green-600" : "from-gray-500 to-gray-600" 
-            },
-            { 
-              icon: Heart, 
-              label: "Risk Level", 
-              value: user?.screeningData?.riskLevel || "low", 
-              color: user?.screeningData?.riskLevel === 'high' ? "from-red-500 to-red-600" :
-                     user?.screeningData?.riskLevel === 'moderate' ? "from-yellow-500 to-yellow-600" :
-                     "from-green-500 to-green-600"
-            }
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.4 + index * 0.1, duration: 0.5 }}
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Card className="hover:shadow-xl transition-all duration-300">
-                <CardContent className="flex items-center p-8">
-                  <motion.div 
-                    className={`w-16 h-16 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center mr-6 shadow-lg`}
-                    whileHover={{ rotate: 5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <stat.icon size={28} className="text-white" />
-                  </motion.div>
-                  <div>
-                    <motion.div 
-                      className="text-3xl font-bold text-gray-900 mb-1"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.6 + index * 0.1 }}
-                    >
+export default Dashboard;
                       {stat.value}
                     </motion.div>
                     <div className="text-sm text-muted-foreground font-medium">
