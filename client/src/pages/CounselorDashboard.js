@@ -109,22 +109,43 @@ const CounselorDashboard = () => {
       
       newSocket.on('connect', () => {
         console.log('✅ Counselor connected to crisis alert system');
-        // Join counselor room for crisis alerts
-        newSocket.emit('join-counselor-room', user.id);
+        // Join counselor room for crisis alerts based on college
+        const roomData = {
+          counselorId: user.id,
+          college: user.college,
+          role: user.role
+        };
+        console.log('🏥 Joining counselor room with data:', roomData);
+        newSocket.emit('join-counselor-room', roomData);
       });
       
       newSocket.on('crisis_alert', (alertData) => {
         console.log('🚨 Crisis alert received:', alertData);
         
         // Add to crisis alerts list
-        setCrisisAlerts(prev => [alertData, ...prev.slice(0, 9)]); // Keep last 10 alerts
+        setCrisisAlerts(prev => {
+          const newAlerts = [alertData, ...prev.slice(0, 9)]; // Keep last 10 alerts
+          console.log('📋 Updated crisis alerts count:', newAlerts.length);
+          return newAlerts;
+        });
         
         // Show browser notification
         if (window.Notification && Notification.permission === 'granted') {
           new Notification('🚨 Crisis Alert', {
-            body: `${alertData.studentName} needs immediate attention`,
+            body: `${alertData.studentName || 'A student'} needs immediate attention`,
             icon: '/favicon.ico',
             tag: 'crisis-alert'
+          });
+        } else if (window.Notification && Notification.permission === 'default') {
+          // Request permission if not granted
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              new Notification('🚨 Crisis Alert', {
+                body: `${alertData.studentName || 'A student'} needs immediate attention`,
+                icon: '/favicon.ico',
+                tag: 'crisis-alert'
+              });
+            }
           });
         }
         
@@ -132,6 +153,18 @@ const CounselorDashboard = () => {
         try {
           const audio = new Audio('/alert-sound.mp3');
           audio.play().catch(() => {}); // Ignore if sound fails
+        } catch (e) {
+          console.log('Alert sound not available');
+        }
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('❌ Counselor disconnected from crisis alert system');
+      });
+
+      newSocket.on('connect_error', (error) => {
+        console.error('🔌 Socket connection error:', error);
+      });
         } catch (e) {}
       });
       
@@ -170,17 +203,26 @@ const CounselorDashboard = () => {
     }
   };
 
-  const loadAnalyticsData = async () => {
-    try {
-      const [dashboardRes, trendsRes] = await Promise.all([
-        analyticsService.getDashboardAnalytics().catch(() => null),
-        analyticsService.getTrends(selectedTimeframe).catch(() => null)
-      ]);
-      
-      setDashboardData(dashboardRes);
-      setTrends(trendsRes);
-    } catch (error) {
-      console.error('Analytics data load failed:', error);
+  const testCrisisAlert = () => {
+    const testAlert = {
+      userId: 'test-user-123',
+      studentName: 'Test Student',
+      message: 'Test crisis alert message',
+      timestamp: new Date().toISOString(),
+      severity: 'high',
+      college: user.college
+    };
+    
+    console.log('🧪 Testing crisis alert:', testAlert);
+    setCrisisAlerts(prev => [testAlert, ...prev.slice(0, 9)]);
+    
+    // Test notification
+    if (window.Notification && Notification.permission === 'granted') {
+      new Notification('🚨 Test Crisis Alert', {
+        body: 'This is a test crisis alert',
+        icon: '/favicon.ico',
+        tag: 'test-crisis-alert'
+      });
     }
   };
 
@@ -434,6 +476,42 @@ const CounselorDashboard = () => {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Test Crisis Alert Button (Development Only) */}
+        {process.env.NODE_ENV === 'development' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mt-8"
+          >
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-yellow-800 flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Crisis Alert Testing
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <Button 
+                    onClick={testCrisisAlert}
+                    variant="outline"
+                    className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                  >
+                    🧪 Test Crisis Alert
+                  </Button>
+                  <p className="text-sm text-yellow-700">
+                    Click to test the crisis alert system (Development only)
+                  </p>
+                </div>
+                <div className="mt-3 text-xs text-yellow-600">
+                  Socket Status: {socket?.connected ? '🟢 Connected' : '🔴 Disconnected'}
                 </div>
               </CardContent>
             </Card>

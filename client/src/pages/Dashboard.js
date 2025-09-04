@@ -289,7 +289,7 @@ const Dashboard = () => {
   };
 
   const MoodTracker = () => (
-    <Card className="hover:shadow-lg transition-shadow duration-300">
+    <Card className="transition-shadow duration-300 hover:shadow-lg">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-3 text-xl">
           <span>🎭</span>
@@ -300,7 +300,7 @@ const Dashboard = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-8">
-        <div className="flex gap-4 justify-center">
+        <div className="flex justify-center gap-4">
           {[
             { emoji: '😊', mood: 'happy', label: 'Happy' },
             { emoji: '😐', mood: 'neutral', label: 'Neutral' },
@@ -312,7 +312,7 @@ const Dashboard = () => {
               key={mood}
               variant={dailyMood === mood ? "default" : "outline"}
               size="lg"
-              className="h-20 w-20 rounded-full text-2xl hover:scale-105 transition-transform flex items-center justify-center p-0"
+              className="flex items-center justify-center w-20 h-20 p-0 text-2xl transition-transform rounded-full hover:scale-105"
               onClick={() => handleMoodCheck(mood)}
               title={label}
             >
@@ -321,7 +321,7 @@ const Dashboard = () => {
           ))}
         </div>
         {dailyMood && (
-          <p className="text-center mt-6 text-sm text-muted-foreground leading-relaxed">
+          <p className="mt-6 text-sm leading-relaxed text-center text-muted-foreground">
             Feeling {dailyMood} today. Remember, it's okay to have ups and downs.
           </p>
         )}
@@ -330,7 +330,7 @@ const Dashboard = () => {
   );
 
   const QuickActions = () => (
-    <Card className="hover:shadow-lg transition-shadow duration-300">
+    <Card className="transition-shadow duration-300 hover:shadow-lg">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-3 text-xl">
           <span>⚡</span>
@@ -351,7 +351,7 @@ const Dashboard = () => {
             <Button
               key={index}
               variant={action.variant}
-              className="h-24 flex-col gap-3 hover:scale-105 transition-transform"
+              className="flex-col h-24 gap-3 transition-transform hover:scale-105"
               asChild={!!action.link}
             >
               {action.link ? (
@@ -373,7 +373,7 @@ const Dashboard = () => {
   );
 
   const GoalTracker = () => (
-    <Card className="hover:shadow-lg transition-shadow duration-300">
+    <Card className="transition-shadow duration-300 hover:shadow-lg">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-3 text-xl">
           <Target size={24} />
@@ -383,11 +383,11 @@ const Dashboard = () => {
           Track your wellness objectives
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6 pb-8">
+      <CardContent className="pb-8 space-y-6">
         {currentGoals.length > 0 ? (
           currentGoals.slice(0, 3).map(goal => (
             <div key={goal._id} className="space-y-3">
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span className="text-base font-medium">{goal.title}</span>
                 <Badge variant="secondary" className="px-3 py-1">{goal.current}/{goal.target}</Badge>
               </div>
@@ -395,7 +395,7 @@ const Dashboard = () => {
             </div>
           ))
         ) : (
-          <div className="text-center py-4 text-gray-500">
+          <div className="py-4 text-center text-gray-500">
             <Target size={32} className="mx-auto mb-2 text-gray-300" />
             <p className="text-sm">No goals set yet</p>
             <p className="text-xs text-muted-foreground">Visit your profile to add goals</p>
@@ -442,7 +442,7 @@ const Dashboard = () => {
         {recentActivity.length > 0 ? (
           recentActivity.map((activity, index) => (
             <div key={index} className="flex items-start gap-3">
-              <Avatar className="h-8 w-8">
+              <Avatar className="w-8 h-8">
                 <AvatarFallback>{activity.icon}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
@@ -455,7 +455,7 @@ const Dashboard = () => {
             </div>
           ))
         ) : (
-          <div className="text-center py-4 text-gray-500">
+          <div className="py-4 text-center text-gray-500">
             <Activity size={32} className="mx-auto mb-2 text-gray-300" />
             <p className="text-sm">No recent activity</p>
             <p className="text-xs text-muted-foreground">Start a chat session to see activity</p>
@@ -466,7 +466,7 @@ const Dashboard = () => {
   );
 
   const MindfulnessCorner = () => (
-    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+    <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-blue-900">
           <span>🧘</span>
@@ -487,7 +487,7 @@ const Dashboard = () => {
             <Button
               key={index}
               variant="ghost"
-              className="h-20 flex-col gap-1 bg-white/50 hover:bg-white/80"
+              className="flex-col h-20 gap-1 bg-white/50 hover:bg-white/80"
             >
               <span className="text-lg">{exercise.icon}</span>
               <span className="text-xs font-medium">{exercise.title}</span>
@@ -501,10 +501,10 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-6">
+      <div className="flex items-center justify-center min-h-screen p-6 bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center p-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
+            <div className="flex items-center justify-center w-16 h-16 mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl">
               <Brain size={32} className="text-white" />
             </div>
             <p className="text-lg text-muted-foreground">Loading your dashboard...</p>
@@ -517,8 +517,8 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Enhanced Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur-sm border-gray-200/50">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <motion.div 
             className="py-6"
             initial={{ opacity: 0, y: -20 }}
@@ -528,25 +528,25 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <Avatar className="h-16 w-16 ring-4 ring-blue-100">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-bold">
+                  <Avatar className="w-16 h-16 ring-4 ring-blue-100">
+                    <AvatarFallback className="text-xl font-bold text-white bg-gradient-to-br from-blue-500 to-purple-600">
                       {user?.name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                    <Heart className="h-3 w-3 text-white" />
+                  <div className="absolute flex items-center justify-center w-6 h-6 bg-green-500 border-2 border-white rounded-full -bottom-1 -right-1">
+                    <Heart className="w-3 h-3 text-white" />
                   </div>
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  <h1 className="text-3xl font-bold text-transparent bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text">
                     {getWelcomeMessage()} 👋
                   </h1>
-                  <p className="text-gray-600 mt-1">How are you feeling today? Let's check in on your wellness journey.</p>
+                  <p className="mt-1 text-gray-600">How are you feeling today? Let's check in on your wellness journey.</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <Button variant="outline" size="sm" className="hidden sm:flex">
-                  <Bell className="h-4 w-4 mr-2" />
+                  <Bell className="w-4 h-4 mr-2" />
                   Notifications
                 </Button>
                 <WellnessButton onOpenTracker={() => setShowWellnessTracker(true)} />
@@ -556,52 +556,52 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Main Content */}
-          <div className="lg:col-span-8 space-y-8">
+          <div className="space-y-8 lg:col-span-8">
             {/* Quick Stats Cards */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <Card className="text-white transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 hover:shadow-xl">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-100 text-sm font-medium">AI Sessions</p>
+                        <p className="text-sm font-medium text-blue-100">AI Sessions</p>
                         <p className="text-3xl font-bold">{aiSessions.length}</p>
-                        <p className="text-blue-100 text-xs mt-1">This month</p>
+                        <p className="mt-1 text-xs text-blue-100">This month</p>
                       </div>
-                      <Brain className="h-12 w-12 text-blue-200" />
+                      <Brain className="w-12 h-12 text-blue-200" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                <Card className="text-white transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 hover:shadow-xl">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-green-100 text-sm font-medium">Wellness Score</p>
+                        <p className="text-sm font-medium text-green-100">Wellness Score</p>
                         <p className="text-3xl font-bold">{wellnessData.length > 0 ? Math.round(wellnessData[wellnessData.length - 1]?.mood * 20) || 75 : 75}%</p>
-                        <p className="text-green-100 text-xs mt-1">Keep it up!</p>
+                        <p className="mt-1 text-xs text-green-100">Keep it up!</p>
                       </div>
-                      <Heart className="h-12 w-12 text-green-200" />
+                      <Heart className="w-12 h-12 text-green-200" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                <Card className="text-white transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 hover:shadow-xl">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-purple-100 text-sm font-medium">Goals Completed</p>
+                        <p className="text-sm font-medium text-purple-100">Goals Completed</p>
                         <p className="text-3xl font-bold">{goals.filter(g => g.completed).length}</p>
-                        <p className="text-purple-100 text-xs mt-1">This week</p>
+                        <p className="mt-1 text-xs text-purple-100">This week</p>
                       </div>
-                      <Target className="h-12 w-12 text-purple-200" />
+                      <Target className="w-12 h-12 text-purple-200" />
                     </div>
                   </CardContent>
                 </Card>
@@ -619,42 +619,42 @@ const Dashboard = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="space-y-6 lg:col-span-4">
             {/* Quick Actions */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+              <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Sparkles className="h-5 w-5 text-yellow-500" />
+                    <Sparkles className="w-5 h-5 text-yellow-500" />
                     <span>Quick Actions</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Link to="/ai-chat" className="block">
-                    <Button className="w-full justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
-                      <Brain className="h-4 w-4 mr-3" />
+                    <Button className="justify-start w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                      <Brain className="w-4 h-4 mr-3" />
                       Chat with AI Counselor
                     </Button>
                   </Link>
                   <Link to="/appointments" className="block">
-                    <Button variant="outline" className="w-full justify-start hover:bg-green-50 hover:border-green-300">
-                      <Calendar className="h-4 w-4 mr-3 text-green-600" />
+                    <Button variant="outline" className="justify-start w-full hover:bg-green-50 hover:border-green-300">
+                      <Calendar className="w-4 h-4 mr-3 text-green-600" />
                       Book Appointment
                     </Button>
                   </Link>
                   <Link to="/resources" className="block">
-                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300">
-                      <BookOpen className="h-4 w-4 mr-3 text-purple-600" />
+                    <Button variant="outline" className="justify-start w-full hover:bg-purple-50 hover:border-purple-300">
+                      <BookOpen className="w-4 h-4 mr-3 text-purple-600" />
                       Browse Resources
                     </Button>
                   </Link>
                   <Link to="/forum" className="block">
-                    <Button variant="outline" className="w-full justify-start hover:bg-orange-50 hover:border-orange-300">
-                      <Users className="h-4 w-4 mr-3 text-orange-600" />
+                    <Button variant="outline" className="justify-start w-full hover:bg-orange-50 hover:border-orange-300">
+                      <Users className="w-4 h-4 mr-3 text-orange-600" />
                       Join Community
                     </Button>
                   </Link>
@@ -668,15 +668,15 @@ const Dashboard = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+              <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Target className="h-5 w-5 text-green-500" />
+                      <Target className="w-5 h-5 text-green-500" />
                       <span>Your Goals</span>
                     </div>
                     <Button size="sm" variant="ghost">
-                      <Plus className="h-4 w-4" />
+                      <Plus className="w-4 h-4" />
                     </Button>
                   </CardTitle>
                 </CardHeader>
@@ -694,8 +694,8 @@ const Dashboard = () => {
                       </div>
                     ))}
                     {goals.length === 0 && (
-                      <div className="text-center py-6">
-                        <Target className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <div className="py-6 text-center">
+                        <Target className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                         <p className="text-sm text-gray-500">No goals set yet</p>
                         <Button size="sm" className="mt-2">Set Your First Goal</Button>
                       </div>
@@ -727,261 +727,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-                      {stat.value}
-                    </motion.div>
-                    <div className="text-sm text-muted-foreground font-medium">
-                      {stat.label}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Wellness Trends Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="mb-8"
-        >
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Wellness Trends
-              </CardTitle>
-              <CardDescription>
-                Track your mood, stress, and sleep patterns over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getWellnessTrendData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis domain={[0, 10]} />
-                    <Tooltip />
-                    <Line 
-                      type="monotone" 
-                      dataKey="mood" 
-                      stroke={COLORS.primary} 
-                      strokeWidth={3}
-                      name="Mood"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="stress" 
-                      stroke={COLORS.warning} 
-                      strokeWidth={3}
-                      name="Stress"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="sleep" 
-                      stroke={COLORS.secondary} 
-                      strokeWidth={3}
-                      name="Sleep Quality"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.primary }}></div>
-                  <span className="text-sm">Mood</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.warning }}></div>
-                  <span className="text-sm">Stress</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.secondary }}></div>
-                  <span className="text-sm">Sleep Quality</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Main Dashboard Layout */}
-        <motion.div 
-          className="grid grid-cols-1 lg:grid-cols-4 gap-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-        >
-          {/* Left Column - Main Content */}
-          <motion.div 
-            className="lg:col-span-3 space-y-8"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.9 }}
-          >
-            {/* Wellness Check-in Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.0 }}
-            >
-              <WellnessButton onOpenTracker={() => setShowWellnessTracker(true)} />
-            </motion.div>
-
-            {/* Quick Actions */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.1 }}
-              whileHover={{ scale: 1.01 }}
-            >
-              <QuickActions />
-            </motion.div>
-
-            {/* Current Goals */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.2 }}
-              whileHover={{ scale: 1.01 }}
-            >
-              <GoalTracker />
-            </motion.div>
-
-            {/* AI Insights */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.4 }}
-              whileHover={{ scale: 1.01 }}
-            >
-              <AIInsights />
-            </motion.div>
-          </motion.div>
-
-          {/* Right Sidebar - Charts & Support */}
-          <motion.div 
-            className="space-y-8"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 1.0 }}
-          >
-            <NotificationCenter />
-
-            {/* User Profile Card */}
-            {/* Appointment Status Chart */}
-            {appointments.length > 0 && (
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    My Appointments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={getAppointmentData()}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={70}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {getAppointmentData().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex justify-center gap-3 mt-4">
-                    {getAppointmentData().map((item) => (
-                      <div key={item.name} className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="text-xs capitalize">{item.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Emergency Resources */}
-            <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-red-900 text-xl">
-                  <span>🚨</span>
-                  Emergency Support
-                </CardTitle>
-                <CardDescription className="text-red-700">
-                  Available 24/7 when you need immediate help
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  { label: 'Crisis Hotline', value: '988', icon: '📞' },
-                  { label: 'Emergency', value: '911', icon: '🚑' },
-                  { label: 'Crisis Text', value: 'HOME to 741741', icon: '💬' }
-                ].map((contact, index) => (
-                  <Button
-                    key={index}
-                    variant="ghost"
-                    className="w-full justify-start bg-white/80 hover:bg-white p-4 h-auto"
-                  >
-                    <span className="mr-4 text-xl">{contact.icon}</span>
-                    <div className="text-left">
-                      <div className="text-xs text-muted-foreground font-medium">{contact.label}</div>
-                      <div className="text-base font-bold text-red-700">{contact.value}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Today's Tip */}
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-blue-900 text-xl">
-                  <span>💡</span>
-                  Today's Wellness Tip
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-blue-800 leading-relaxed">
-                  {todaysTip || "Practice the 4-7-8 breathing technique: Breathe in for 4 counts, hold for 7, exhale for 8."}
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.div>
-      </div>
-
-      {/* Wellness Recommendations Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 1.2 }}
-        className="mt-8"
-      >
-        <WellnessRecommendations />
-      </motion.div>
-
-      {/* Wellness Tracker Modal */}
-      <WellnessTracker 
-        isOpen={showWellnessTracker} 
-        onClose={() => setShowWellnessTracker(false)} 
-      />
-    </div>
-  );
-};
-
-export default Dashboard;
+                      
