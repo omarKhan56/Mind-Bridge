@@ -557,11 +557,173 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {analysis?.overview.totalSessions || 0} sessions
-              </span>
-            </div>
-            
-            {analysis?.progressIndicators.overallTrend && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-8 space-y-8">
+            {/* Quick Stats Cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-blue-100 text-sm font-medium">AI Sessions</p>
+                        <p className="text-3xl font-bold">{aiSessions.length}</p>
+                        <p className="text-blue-100 text-xs mt-1">This month</p>
+                      </div>
+                      <Brain className="h-12 w-12 text-blue-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-green-100 text-sm font-medium">Wellness Score</p>
+                        <p className="text-3xl font-bold">{wellnessData.length > 0 ? Math.round(wellnessData[wellnessData.length - 1]?.mood * 20) || 75 : 75}%</p>
+                        <p className="text-green-100 text-xs mt-1">Keep it up!</p>
+                      </div>
+                      <Heart className="h-12 w-12 text-green-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-purple-100 text-sm font-medium">Goals Completed</p>
+                        <p className="text-3xl font-bold">{goals.filter(g => g.completed).length}</p>
+                        <p className="text-purple-100 text-xs mt-1">This week</p>
+                      </div>
+                      <Target className="h-12 w-12 text-purple-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.div>
+
+            {/* Wellness Recommendations */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <WellnessRecommendations />
+            </motion.div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Quick Actions */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Sparkles className="h-5 w-5 text-yellow-500" />
+                    <span>Quick Actions</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Link to="/ai-chat" className="block">
+                    <Button className="w-full justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                      <Brain className="h-4 w-4 mr-3" />
+                      Chat with AI Counselor
+                    </Button>
+                  </Link>
+                  <Link to="/appointments" className="block">
+                    <Button variant="outline" className="w-full justify-start hover:bg-green-50 hover:border-green-300">
+                      <Calendar className="h-4 w-4 mr-3 text-green-600" />
+                      Book Appointment
+                    </Button>
+                  </Link>
+                  <Link to="/resources" className="block">
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300">
+                      <BookOpen className="h-4 w-4 mr-3 text-purple-600" />
+                      Browse Resources
+                    </Button>
+                  </Link>
+                  <Link to="/forum" className="block">
+                    <Button variant="outline" className="w-full justify-start hover:bg-orange-50 hover:border-orange-300">
+                      <Users className="h-4 w-4 mr-3 text-orange-600" />
+                      Join Community
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Goals Progress */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Target className="h-5 w-5 text-green-500" />
+                      <span>Your Goals</span>
+                    </div>
+                    <Button size="sm" variant="ghost">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {goals.slice(0, 3).map((goal, index) => (
+                      <div key={goal._id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-900">{goal.title}</p>
+                          <Badge variant={goal.completed ? "default" : "secondary"} className="text-xs">
+                            {goal.completed ? "Complete" : "In Progress"}
+                          </Badge>
+                        </div>
+                        <Progress value={goal.progress || (goal.completed ? 100 : 30)} className="h-2" />
+                      </div>
+                    ))}
+                    {goals.length === 0 && (
+                      <div className="text-center py-6">
+                        <Target className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">No goals set yet</p>
+                        <Button size="sm" className="mt-2">Set Your First Goal</Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* AI Insights */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <AIInsights />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Wellness Tracker Modal */}
+      <WellnessTracker 
+        isOpen={showWellnessTracker} 
+        onClose={() => setShowWellnessTracker(false)} 
+      />
+    </div>
+  );
               <div className={`px-3 py-1 rounded-full border shadow-sm text-sm font-medium ${
                 analysis.progressIndicators.overallTrend === 'improving' 
                   ? 'bg-green-50 border-green-200 text-green-700'
