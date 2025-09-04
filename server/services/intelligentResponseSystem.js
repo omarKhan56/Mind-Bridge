@@ -46,10 +46,13 @@ class IntelligentResponseSystem {
       // Validate ObjectId format
       if (!userId || typeof userId !== 'string' || userId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(userId)) {
         console.log('Invalid userId format, using default profile');
-        return { name: 'there', college: 'your college' };
+        return { name: 'there', college: 'your college', historicalContext: null };
       }
 
       const user = await User.findById(userId).populate('college');
+      
+      // Fetch historical session context
+      const historicalContext = await this.getHistoricalContext(userId);
       
       return {
         name: user?.name || 'there',
@@ -59,12 +62,126 @@ class IntelligentResponseSystem {
         preferredTopics: user?.aiAnalysis?.preferredTopics || [],
         communicationStyle: user?.aiAnalysis?.communicationStyle || 'supportive',
         lastInteraction: user?.aiAnalysis?.lastAnalysis || null,
-        screeningData: user?.screeningData || null
+        screeningData: user?.screeningData || null,
+        historicalContext
       };
     } catch (error) {
       console.error('Error fetching user profile:', error.message);
-      return { name: 'there', college: 'your college' };
+      return { name: 'there', college: 'your college', historicalContext: null };
     }
+  }
+
+  async getHistoricalContext(userId) {
+    try {
+      const AISession = require('../models/AISession');
+      
+      // Fetch last 10 sessions with messages
+      const sessions = await AISession.find({ user: userId })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select('title mood messages createdAt')
+        .lean();
+
+      if (!sessions || sessions.length === 0) {
+        return null;
+      }
+
+      // Process sessions to extract key context
+      const contextSummary = {
+        totalSessions: sessions.length,
+        recentSessions: [],
+        recurringThemes: [],
+        moodProgression: [],
+        keyInsights: []
+      };
+
+      // Process each session
+      sessions.forEach((session, index) => {
+        const sessionSummary = {
+          date: new Date(session.createdAt).toLocaleDateString(),
+          title: session.title || 'General conversation',
+          mood: session.mood || 'neutral',
+          messageCount: session.messages?.length || 0,
+          keyTopics: this.extractKeyTopics(session.messages || [])
+        };
+
+        contextSummary.recentSessions.push(sessionSummary);
+        contextSummary.moodProgression.push(session.mood || 'neutral');
+      });
+
+      // Extract recurring themes
+      const allTopics = contextSummary.recentSessions.flatMap(s => s.keyTopics);
+      const topicCounts = {};
+      allTopics.forEach(topic => {
+        topicCounts[topic] = (topicCounts[topic] || 0) + 1;
+      });
+      
+      contextSummary.recurringThemes = Object.entries(topicCounts)
+        .filter(([topic, count]) => count >= 2)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([topic]) => topic);
+
+      // Generate key insights
+      contextSummary.keyInsights = this.generateInsights(contextSummary);
+
+      return contextSummary;
+    } catch (error) {
+      console.error('Error fetching historical context:', error.message);
+      return null;
+    }
+  }
+
+  extractKeyTopics(messages) {
+    const topics = [];
+    const topicKeywords = {
+      'academic_stress': ['exam', 'study', 'grade', 'assignment', 'test', 'homework'],
+      'anxiety': ['anxious', 'worried', 'nervous', 'panic', 'stress'],
+      'depression': ['sad', 'depressed', 'hopeless', 'down', 'empty'],
+      'relationships': ['friend', 'family', 'relationship', 'social', 'lonely'],
+      'sleep': ['sleep', 'tired', 'insomnia', 'rest', 'exhausted'],
+      'career': ['job', 'career', 'future', 'work', 'internship']
+    };
+
+    const allText = messages.map(m => m.content || '').join(' ').toLowerCase();
+    
+    Object.entries(topicKeywords).forEach(([topic, keywords]) => {
+      if (keywords.some(keyword => allText.includes(keyword))) {
+        topics.push(topic);
+      }
+    });
+
+    return topics;
+  }
+
+  generateInsights(contextSummary) {
+    const insights = [];
+    
+    // Mood trend analysis
+    const recentMoods = contextSummary.moodProgression.slice(0, 5);
+    const positiveMoods = recentMoods.filter(m => ['good', 'better', 'positive'].includes(m)).length;
+    const negativeMoods = recentMoods.filter(m => ['sad', 'anxious', 'stressed'].includes(m)).length;
+    
+    if (positiveMoods > negativeMoods) {
+      insights.push('showing_improvement');
+    } else if (negativeMoods > positiveMoods) {
+      insights.push('needs_support');
+    }
+
+    // Recurring theme insights
+    if (contextSummary.recurringThemes.includes('academic_stress')) {
+      insights.push('academic_challenges');
+    }
+    if (contextSummary.recurringThemes.includes('anxiety')) {
+      insights.push('anxiety_management_needed');
+    }
+
+    // Engagement insights
+    if (contextSummary.totalSessions >= 5) {
+      insights.push('regular_user');
+    }
+
+    return insights;
   }
 
   getConversationHistory(userId) {
@@ -123,8 +240,11 @@ JSON response:
 
   buildContextPrompt(message, userProfile, history, messageContext, sessionContext, isFirstMessage = false) {
     const historyText = history.length > 0 
-      ? `Previous conversation:\n${history.map(h => `User: ${h.message}\nYou: ${h.response}`).join('\n')}\n\n`
+      ? `Current session history:\n${history.map(h => `User: ${h.message}\nYou: ${h.response}`).join('\n')}\n\n`
       : '';
+
+    // Build historical context summary
+    const historicalContextText = this.buildHistoricalContextText(userProfile.historicalContext);
 
     const greetingInstruction = isFirstMessage 
       ? `This is the first message in a new session. Start with a brief, warm greeting introducing yourself as Dr. Sarah Chen, then respond to their message. Keep the greeting natural and brief (1-2 sentences max).`
@@ -138,6 +258,8 @@ User Profile:
 - Risk level: ${userProfile.riskLevel}
 - Communication style preference: ${userProfile.communicationStyle}
 
+${historicalContextText}
+
 Current Context:
 - Intent: ${messageContext.intent}
 - Emotional state: ${messageContext.emotionalState}/10
@@ -150,15 +272,61 @@ ${historyText}Current message: "${message}"
 Instructions:
 - You are Dr. Sarah Chen, a warm and experienced mental health counselor
 - ${greetingInstruction}
+- Use historical context to provide continuity and reference previous progress
+- Acknowledge recurring themes and patterns when relevant
+- Reference successful interventions from past sessions when applicable
 - Respond with empathy and understanding
-- Reference previous conversations when relevant (but only if history exists)
 - Adapt your communication style to the user's needs
 - Provide practical, actionable advice when appropriate
 - If crisis indicators are present, prioritize safety and resources
-- Keep responses conversational and supportive (100-150 words)
+- Keep responses conversational and supportive (150-200 words)
 `;
 
     return contextInfo;
+  }
+
+  buildHistoricalContextText(historicalContext) {
+    if (!historicalContext) {
+      return 'Historical Context: This appears to be a new user with no previous sessions.';
+    }
+
+    const { totalSessions, recentSessions, recurringThemes, moodProgression, keyInsights } = historicalContext;
+
+    let contextText = `Historical Context (${totalSessions} previous sessions):\n`;
+    
+    // Recent sessions summary
+    if (recentSessions.length > 0) {
+      contextText += `Recent Sessions:\n`;
+      recentSessions.slice(0, 3).forEach(session => {
+        contextText += `- ${session.date}: ${session.title} (${session.mood} mood, ${session.keyTopics.join(', ')})\n`;
+      });
+    }
+
+    // Recurring themes
+    if (recurringThemes.length > 0) {
+      contextText += `Recurring Themes: ${recurringThemes.join(', ')}\n`;
+    }
+
+    // Mood progression
+    if (moodProgression.length > 0) {
+      const recentMoods = moodProgression.slice(0, 5);
+      contextText += `Recent Mood Trend: ${recentMoods.join(' → ')}\n`;
+    }
+
+    // Key insights
+    if (keyInsights.length > 0) {
+      const insightDescriptions = {
+        'showing_improvement': 'User has been showing positive progress',
+        'needs_support': 'User may need additional support',
+        'academic_challenges': 'Ongoing academic stress patterns',
+        'anxiety_management_needed': 'Recurring anxiety concerns',
+        'regular_user': 'Engaged user with consistent sessions'
+      };
+      
+      contextText += `Key Insights: ${keyInsights.map(insight => insightDescriptions[insight] || insight).join(', ')}\n`;
+    }
+
+    return contextText;
   }
 
   personalizeResponse(responseText, userProfile, messageContext, isFirstMessage = false) {
