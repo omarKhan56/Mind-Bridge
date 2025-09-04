@@ -193,13 +193,42 @@ io.on('connection', (socket) => {
         responseType: "therapeutic"
       });
 
-      // Real-time sentiment analysis for crisis detection
-      const SentimentAnalyzer = require('./services/aiAnalysis/sentimentAnalyzer');
-      const sentimentAnalyzer = new SentimentAnalyzer();
+      // Enhanced AI response generation
+      const IntelligentResponseSystem = require('./services/intelligentResponseSystem');
+      const EnhancedSentimentAnalyzer = require('./services/aiAnalysis/enhancedSentimentAnalyzer');
       
+      const intelligentResponse = new IntelligentResponseSystem();
+      const enhancedSentimentAnalyzer = new EnhancedSentimentAnalyzer();
+
+      // Generate personalized AI response
+      const aiResponse = await intelligentResponse.generatePersonalizedResponse(
+        message, 
+        userId, 
+        { sessionId, context }
+      );
+
+      // Store the AI response
+      const responseMessage = {
+        sender: 'ai',
+        message: aiResponse.text,
+        timestamp: new Date(),
+        therapistName: 'Dr. Sarah Chen',
+        responseType: aiResponse.responseStyle || 'therapeutic',
+        personalized: aiResponse.personalized || false,
+        urgencyLevel: aiResponse.urgencyLevel || 2
+      };
+
+      socket.emit('ai-response', responseMessage);
+
+      // Enhanced sentiment analysis for crisis detection
       try {
-        const sentiment = await sentimentAnalyzer.analyzeChatSentiment([{ content: message }]);
-        console.log('🔍 Sentiment analysis result:', JSON.stringify(sentiment, null, 2));
+        const sentiment = await enhancedSentimentAnalyzer.analyzeChatSentiment([{ content: message }], userId);
+        console.log('🔍 Enhanced sentiment analysis:', {
+          sentiment: sentiment.overallSentiment,
+          emotion: sentiment.primaryEmotion,
+          crisis: sentiment.crisisIndicators?.present,
+          method: sentiment.analysisMethod
+        });
         
         // Check for crisis indicators
         if (sentiment.crisisIndicators?.present && sentiment.crisisIndicators.confidence > 0.7) {
