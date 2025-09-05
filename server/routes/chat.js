@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const { eventHandler } = require('../config/inngest');
 const router = express.Router();
 
 // Simple chat history storage (in production, use a proper database)
@@ -29,7 +30,7 @@ router.get('/history', auth, async (req, res) => {
 // Save chat message
 router.post('/message', auth, async (req, res) => {
   try {
-    const { message, type } = req.body; // type: 'user' or 'ai'
+    const { message, type, aiResponse } = req.body; // type: 'user' or 'ai'
     
     if (!chatSessions.has(req.user.userId)) {
       chatSessions.set(req.user.userId, []);
@@ -45,6 +46,11 @@ router.post('/message', auth, async (req, res) => {
     // Keep only last 50 messages
     if (userHistory.length > 50) {
       userHistory.splice(0, userHistory.length - 50);
+    }
+
+    // Process chat interaction for crisis detection
+    if (type === 'user' && message) {
+      await eventHandler.handleChatInteraction(req.user.userId, message, aiResponse);
     }
     
     res.json({ success: true });

@@ -6,7 +6,7 @@ const socketIo = require('socket.io');
 require('dotenv').config();
 
 const geminiService = require('./services/geminiService');
-const { inngest, functions, serve } = require('./lib/inngest');
+const { inngest, functions, serve, eventHandler, inngestEnabled } = require('./config/inngest');
 const aiScheduler = require('./services/aiScheduler');
 const userAnalysisService = require('./services/userAnalysisService');
 const User = require('./models/User');
@@ -225,8 +225,10 @@ app.post('/api/test-ai', async (req, res) => {
   }
 });
 
-// Inngest endpoint
-app.use('/api/inngest', serve({ client: inngest, functions }));
+// Inngest endpoint (only if enabled)
+if (inngestEnabled && serve) {
+  app.use('/api/inngest', serve({ client: inngest, functions }));
+}
 
 // Socket.io for real-time chat
 io.on('connection', (socket) => {
@@ -623,11 +625,8 @@ io.on('connection', (socket) => {
         }
       }
 
-      // Send event to Inngest for processing (non-blocking)
-      inngest.send({
-        name: 'chat/message-sent',
-        data: { userId, message, aiResponse }
-      }).catch(err => console.log('📊 Inngest error (non-critical):', err.message));
+      // Process chat interaction through event handler
+      await eventHandler.handleChatInteraction(userId, message, aiResponse);
 
     } catch (error) {
       console.error('❌ AI chat error:', error.message);

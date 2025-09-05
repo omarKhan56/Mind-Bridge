@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const aiAnalysisService = require('../services/aiAnalysis');
 const apiStatus = require('../services/aiAnalysis/apiStatus');
 const User = require('../models/User');
+const { eventHandler } = require('../config/inngest');
 const router = express.Router();
 
 // Middleware to verify JWT token
@@ -139,124 +140,67 @@ router.get('/campus/:collegeId?', auth, async (req, res) => {
   }
 });
 
-// Trigger real-time analysis (for chat messages)
+// Trigger real-time analysis (for chat messages) - Now async with Inngest
 router.post('/analyze-message', auth, async (req, res) => {
   try {
     const { message, sessionId } = req.body;
+    const analysisId = sessionId || `analysis_${Date.now()}_${req.user.userId}`;
     
-    // Quick sentiment analysis for real-time alerts
-    const sentimentAnalyzer = new (require('../services/aiAnalysis/sentimentAnalyzer'))();
-    const sentiment = await sentimentAnalyzer.analyzeChatSentiment([{ content: message }]);
-    
-    // Check for crisis indicators
-    if (sentiment.crisisIndicators?.present && sentiment.crisisIndicators.confidence > 0.7) {
-      // Trigger immediate alert
-      console.log(`🚨 Crisis indicator detected for user ${req.user.userId}`);
-      
-      // Get user details
-      const user = await User.findById(req.user.userId).populate('college');
-      
-      // Create crisis alert
-      const CrisisAlert = require('../models/CrisisAlert');
-      const crisisAlert = new CrisisAlert({
-        user: req.user.userId,
-        college: user.college._id,
-        message: message,
-        detectionMethod: 'ai-analysis',
-        urgency: sentiment.urgencyLevel >= 4 ? 5 : 4,
-        riskLevel: sentiment.urgencyLevel >= 4 ? 'critical' : 'high',
-        confidence: Math.round(sentiment.crisisIndicators.confidence * 100),
-        status: 'active'
-      });
-      
-      await crisisAlert.save();
-      
-      // Find counselors at the same college
-      const counselors = await User.find({ 
-        role: 'counselor',
-        college: user.college._id,
-        isActive: true
-      });
-
-      // Create counselor notifications
-      if (counselors.length > 0) {
-        const CounselorNotification = require('../models/CounselorNotification');
-        const counselorAlerts = counselors.map(counselor => ({
-          counselor: counselor._id,
-          student: user._id,
-          college: user.college._id,
-          alertType: 'crisis_acknowledged',
-          priority: sentiment.urgencyLevel >= 4 ? 'urgent' : 'high',
-          message: `CRISIS DETECTED: Student ${user.studentId || 'Anonymous'} used concerning language. Message: "${message}". Confidence: ${Math.round(sentiment.crisisIndicators.confidence * 100)}%`,
-          originalCrisisAlert: crisisAlert._id,
-          status: 'pending'
-        }));
-
-        await CounselorNotification.insertMany(counselorAlerts);
-        
-        // Send real-time notifications via Socket.IO
-        const io = req.app.get('io');
-        if (io) {
-          // Notify counselors
-          counselors.forEach(counselor => {
-            io.to(`counselor_${counselor._id}`).emit('crisis-alert', {
-              type: 'crisis_detected',
-              student: {
-                id: user.studentId || 'Anonymous',
-                name: user.name || 'Anonymous Student',
-                department: user.department,
-                riskLevel: sentiment.urgencyLevel >= 4 ? 'critical' : 'high'
-              },
-              message: message,
-              urgency: sentiment.urgencyLevel,
-              confidence: Math.round(sentiment.crisisIndicators.confidence * 100),
-              detectedAt: new Date()
-            });
-          });
-
-          // Notify all admins
-          io.to('admin').emit('crisis-alert', {
-            type: 'crisis_detected',
-            student: {
-              id: user.studentId || 'Anonymous',
-              name: user.name || 'Anonymous Student',
-              department: user.department,
-              college: user.college?.name || 'Unknown College',
-              riskLevel: sentiment.urgencyLevel >= 4 ? 'critical' : 'high'
-            },
-            message: message,
-            urgency: sentiment.urgencyLevel,
-            confidence: Math.round(sentiment.crisisIndicators.confidence * 100),
-            detectedAt: new Date(),
-            counselorsNotified: counselors.length
-          });
-        }
-        
-        console.log(`🚨 Crisis alert sent to ${counselors.length} counselors at ${user.college.name}`);
+    // Send to background AI processing pipeline
+    await inngest.send({
+      name: 'ai/analyze-request',
+      data: { 
+        userId: req.user.userId, 
+        message, 
+        sessionId: analysisId,
+        timestamp: Date.now(),
+        priority: 'high' // Real-time chat gets priority
       }
-      
-      // Store alert in user record (existing code)
-      await User.findByIdAndUpdate(req.user.userId, {
-        $push: {
-          'alerts': {
-            type: 'crisis_indicator',
-            message: 'Crisis language detected in chat',
-            timestamp: new Date(),
-            severity: sentiment.urgencyLevel
-          }
-        }
-      });
-    }
-    
-    res.json({
-      sentiment: sentiment.overallSentiment,
-      crisisDetected: sentiment.crisisIndicators?.present || false,
-      urgencyLevel: sentiment.urgencyLevel,
-      recommendations: sentiment.recommendedInterventions
     });
+
+    // Track analytics
+    await inngest.send({
+      name: 'analytics/user-action',
+      data: {
+        type: 'chat_analysis_requested',
+        userId: req.user.userId,
+        metadata: { messageLength: message.length, sessionId: analysisId },
+        timestamp: Date.now()
+      }
+    });
+
+    // Return immediately for better UX
+    res.json({ 
+      analysisId,
+      status: 'processing',
+      message: 'Analysis in progress. Check status with analysis ID.'
+    });
+
   } catch (error) {
     console.error('Real-time analysis error:', error);
-    res.status(500).json({ message: 'Analysis failed' });
+    res.status(500).json({ message: 'Analysis failed', error: error.message });
+  }
+});
+
+// Check analysis status
+router.get('/status/:sessionId', auth, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Check Redis cache for result
+    const Redis = require('ioredis');
+    const redis = new Redis(process.env.REDIS_URL);
+    const result = await redis.get(`analysis:${sessionId}`);
+    
+    if (result) {
+      const analysis = JSON.parse(result);
+      await redis.del(`analysis:${sessionId}`); // Clean up
+      res.json({ status: 'complete', analysis });
+    } else {
+      res.json({ status: 'processing' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Status check failed' });
   }
 });
 

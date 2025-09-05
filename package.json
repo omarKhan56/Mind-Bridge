@@ -8,13 +8,24 @@
     "server": "cd server && npm run dev",
     "client": "cd client && npm start",
     "build": "cd client && npm run build",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "test": "node run-tests.js",
+    "test:unit": "node run-tests.js unit",
+    "test:integration": "node run-tests.js integration", 
+    "test:e2e": "node run-tests.js e2e",
+    "test:inngest": "node run-tests.js inngest",
+    "test:crisis": "node run-tests.js crisis",
+    "test:ai": "node run-tests.js ai",
+    "test:all": "node run-tests.js all"
   },
   "keywords": [
     "mental-health",
     "college",
     "intervention",
-    "psychology"
+    "psychology",
+    "crisis-detection",
+    "ai-analysis",
+    "inngest"
   ],
   "author": "MindBridge Team",
   "license": "MIT",
