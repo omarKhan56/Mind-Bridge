@@ -70,7 +70,7 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="student">
                   <Profile />
                 </ProtectedRoute>
               } />

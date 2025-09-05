@@ -12,6 +12,7 @@ import WellnessTracker from '../components/WellnessTracker';
 import WellnessButton from '../components/WellnessButton';
 import WellnessRecommendations from '../components/WellnessRecommendations';
 import AIInsights from '../components/AIInsights';
+import StudentMessages from '../components/StudentMessages';
 import analyticsService from '../services/analyticsService';
 import { 
   LineChart, 
@@ -712,6 +713,25 @@ const Dashboard = () => {
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <AIInsights />
+            </motion.div>
+
+            {/* Messages Section */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    Messages
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StudentMessages />
+                </CardContent>
+              </Card>
             </motion.div>
           </div>
         </div>

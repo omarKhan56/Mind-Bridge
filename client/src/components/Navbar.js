@@ -121,18 +121,30 @@ const Navbar = () => {
             
             {user && (
               <div className="flex items-center gap-4 ml-4 pl-4 border-l border-gray-200">
-                <Link 
-                  to="/profile"
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-                  title="View Profile"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
+                {user.role === 'student' && (
+                  <Link 
+                    to="/profile"
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                    title="View Profile"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {user.name}
+                    </span>
+                  </Link>
+                )}
+                {user.role !== 'student' && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {user.name}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {user.name}
-                  </span>
-                </Link>
+                )}
                 <motion.button
                   onClick={handleLogout}
                   className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
@@ -191,17 +203,26 @@ const Navbar = () => {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3, delay: 0.2 }}
                 >
-                  <Link 
-                    to="/profile"
-                    className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    title="View Profile"
-                  >
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
+                  {user.role === 'student' ? (
+                    <Link 
+                      to="/profile"
+                      className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      title="View Profile"
+                    >
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="font-medium text-gray-700">{user.name}</span>
+                    </Link>
+                  ) : (
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="font-medium text-gray-700">{user.name}</span>
                     </div>
-                    <span className="font-medium text-gray-700">{user.name}</span>
-                  </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 text-red-500 hover:text-red-600 transition-colors duration-200"

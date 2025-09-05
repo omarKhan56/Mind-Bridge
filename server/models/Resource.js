@@ -1,45 +1,71 @@
 const mongoose = require('mongoose');
 
 const resourceSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: String,
-  
-  type: { 
-    type: String, 
-    enum: ['video', 'audio', 'article', 'guide', 'exercise'], 
-    required: true 
+  title: {
+    type: String,
+    required: true,
+    maxlength: 200
   },
-  
-  category: { 
-    type: String, 
-    enum: ['anxiety', 'depression', 'stress', 'sleep', 'relationships', 'academic', 'general'], 
-    required: true 
+  description: {
+    type: String,
+    required: true,
+    maxlength: 1000
   },
-  
-  language: { type: String, default: 'en' },
-  
+  type: {
+    type: String,
+    enum: ['article', 'video', 'worksheet', 'exercise', 'guide', 'tool'],
+    required: true
+  },
+  category: {
+    type: String,
+    enum: ['anxiety', 'depression', 'stress', 'relationships', 'academic', 'general'],
+    required: true
+  },
   content: {
-    url: String,
-    filePath: String,
-    text: String,
-    duration: Number // for audio/video in seconds
+    type: String,
+    required: true
   },
-  
+  attachments: [{
+    filename: String,
+    url: String,
+    fileType: String
+  }],
   tags: [String],
-  difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
-  
-  // Analytics
-  viewCount: { type: Number, default: 0 },
-  rating: { type: Number, default: 0 },
-  ratingCount: { type: Number, default: 0 },
-  
-  // Access control
-  isPublic: { type: Boolean, default: true },
-  requiredRole: { type: String, enum: ['student', 'counselor', 'admin'] },
-  
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  college: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'College',
+    required: true
+  },
+  isPublic: {
+    type: Boolean,
+    default: false
+  },
+  sharedWith: [{
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    sharedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  usage: {
+    views: { type: Number, default: 0 },
+    shares: { type: Number, default: 0 },
+    downloads: { type: Number, default: 0 }
+  }
+}, {
+  timestamps: true
 });
+
+resourceSchema.index({ college: 1, category: 1 });
+resourceSchema.index({ createdBy: 1, createdAt: -1 });
+resourceSchema.index({ tags: 1 });
 
 module.exports = mongoose.model('Resource', resourceSchema);

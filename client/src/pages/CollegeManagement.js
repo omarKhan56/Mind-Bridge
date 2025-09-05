@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Building, Users, Mail, Phone } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, Users, Mail, Phone, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
 import axios from 'axios';
+import ErrorBoundary from '../components/ErrorBoundary';
 
-const CollegeManagement = () => {
+const CollegeManagementContent = () => {
   const [colleges, setColleges] = useState([]);
   const [counselors, setCounselors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [collegeFilter, setCollegeFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(6);
   const [showCollegeModal, setShowCollegeModal] = useState(false);
   const [showCounselorModal, setShowCounselorModal] = useState(false);
   const [editingCollege, setEditingCollege] = useState(null);
@@ -166,6 +172,24 @@ const CollegeManagement = () => {
     }
   };
 
+  // Filter and pagination logic
+  const filteredColleges = colleges.filter(college =>
+    college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    college.code?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredCounselors = counselors.filter(counselor => {
+    const matchesSearch = counselor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         counselor.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCollege = collegeFilter === 'all' || counselor.college?._id === collegeFilter;
+    return matchesSearch && matchesCollege;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredColleges.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedColleges = filteredColleges.slice(startIndex, startIndex + itemsPerPage);
+
   const resetCollegeForm = () => {
     setCollegeForm({ name: '', code: '', address: '', contactEmail: '', contactPhone: '' });
     setEditingCollege(null);
@@ -203,13 +227,51 @@ const CollegeManagement = () => {
           <p className="text-gray-600">Manage colleges and their counselors</p>
         </div>
 
+        {/* Search and Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search colleges or counselors..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <Select value={collegeFilter} onValueChange={setCollegeFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="Filter by college" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Colleges</SelectItem>
+                    {colleges.map((college) => (
+                      <SelectItem key={college._id} value={college._id}>
+                        {college.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Colleges Section */}
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle className="flex items-center gap-2">
                 <Building className="h-5 w-5" />
-                Colleges ({colleges.length})
+                Colleges ({filteredColleges.length})
               </CardTitle>
               <Button onClick={() => setShowCollegeModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -219,7 +281,7 @@ const CollegeManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {colleges.map((college) => (
+              {paginatedColleges.map((college) => (
                 <motion.div
                   key={college._id}
                   initial={{ opacity: 0, y: 20 }}
@@ -259,6 +321,31 @@ const CollegeManagement = () => {
                 </motion.div>
               ))}
             </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -268,7 +355,7 @@ const CollegeManagement = () => {
             <div className="flex justify-between items-center">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Counselors ({counselors.length})
+                Counselors ({filteredCounselors.length})
               </CardTitle>
               <Button onClick={() => setShowCounselorModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -289,7 +376,7 @@ const CollegeManagement = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {counselors.map((counselor) => (
+                  {filteredCounselors.map((counselor) => (
                     <tr key={counselor._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap font-medium">{counselor.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-600">{counselor.email}</td>
@@ -489,6 +576,14 @@ const CollegeManagement = () => {
         </Dialog>
       </div>
     </div>
+  );
+};
+
+const CollegeManagement = () => {
+  return (
+    <ErrorBoundary>
+      <CollegeManagementContent />
+    </ErrorBoundary>
   );
 };
 

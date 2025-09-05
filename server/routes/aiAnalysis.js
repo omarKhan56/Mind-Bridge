@@ -153,7 +153,89 @@ router.post('/analyze-message', auth, async (req, res) => {
       // Trigger immediate alert
       console.log(`🚨 Crisis indicator detected for user ${req.user.userId}`);
       
-      // Store alert in user record
+      // Get user details
+      const user = await User.findById(req.user.userId).populate('college');
+      
+      // Create crisis alert
+      const CrisisAlert = require('../models/CrisisAlert');
+      const crisisAlert = new CrisisAlert({
+        user: req.user.userId,
+        college: user.college._id,
+        message: message,
+        detectionMethod: 'ai-analysis',
+        urgency: sentiment.urgencyLevel >= 4 ? 5 : 4,
+        riskLevel: sentiment.urgencyLevel >= 4 ? 'critical' : 'high',
+        confidence: Math.round(sentiment.crisisIndicators.confidence * 100),
+        status: 'active'
+      });
+      
+      await crisisAlert.save();
+      
+      // Find counselors at the same college
+      const counselors = await User.find({ 
+        role: 'counselor',
+        college: user.college._id,
+        isActive: true
+      });
+
+      // Create counselor notifications
+      if (counselors.length > 0) {
+        const CounselorNotification = require('../models/CounselorNotification');
+        const counselorAlerts = counselors.map(counselor => ({
+          counselor: counselor._id,
+          student: user._id,
+          college: user.college._id,
+          alertType: 'crisis_acknowledged',
+          priority: sentiment.urgencyLevel >= 4 ? 'urgent' : 'high',
+          message: `CRISIS DETECTED: Student ${user.studentId || 'Anonymous'} used concerning language. Message: "${message}". Confidence: ${Math.round(sentiment.crisisIndicators.confidence * 100)}%`,
+          originalCrisisAlert: crisisAlert._id,
+          status: 'pending'
+        }));
+
+        await CounselorNotification.insertMany(counselorAlerts);
+        
+        // Send real-time notifications via Socket.IO
+        const io = req.app.get('io');
+        if (io) {
+          // Notify counselors
+          counselors.forEach(counselor => {
+            io.to(`counselor_${counselor._id}`).emit('crisis-alert', {
+              type: 'crisis_detected',
+              student: {
+                id: user.studentId || 'Anonymous',
+                name: user.name || 'Anonymous Student',
+                department: user.department,
+                riskLevel: sentiment.urgencyLevel >= 4 ? 'critical' : 'high'
+              },
+              message: message,
+              urgency: sentiment.urgencyLevel,
+              confidence: Math.round(sentiment.crisisIndicators.confidence * 100),
+              detectedAt: new Date()
+            });
+          });
+
+          // Notify all admins
+          io.to('admin').emit('crisis-alert', {
+            type: 'crisis_detected',
+            student: {
+              id: user.studentId || 'Anonymous',
+              name: user.name || 'Anonymous Student',
+              department: user.department,
+              college: user.college?.name || 'Unknown College',
+              riskLevel: sentiment.urgencyLevel >= 4 ? 'critical' : 'high'
+            },
+            message: message,
+            urgency: sentiment.urgencyLevel,
+            confidence: Math.round(sentiment.crisisIndicators.confidence * 100),
+            detectedAt: new Date(),
+            counselorsNotified: counselors.length
+          });
+        }
+        
+        console.log(`🚨 Crisis alert sent to ${counselors.length} counselors at ${user.college.name}`);
+      }
+      
+      // Store alert in user record (existing code)
       await User.findByIdAndUpdate(req.user.userId, {
         $push: {
           'alerts': {

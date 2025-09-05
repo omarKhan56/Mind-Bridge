@@ -8,8 +8,64 @@ require('dotenv').config();
 const geminiService = require('./services/geminiService');
 const { inngest, functions, serve } = require('./lib/inngest');
 const aiScheduler = require('./services/aiScheduler');
+const userAnalysisService = require('./services/userAnalysisService');
 const User = require('./models/User');
 const AISession = require('./models/AISession');
+const CrisisAlert = require('./models/CrisisAlert');
+const Message = require('./models/Message');
+const Conversation = require('./models/Conversation');
+
+// Helper function to emit dashboard updates to counselors
+function emitDashboardUpdate(collegeId, updateType, data = {}) {
+  if (collegeId) {
+    io.to(`college_${collegeId}_counselors`).emit(updateType, {
+      timestamp: new Date(),
+      ...data
+    });
+    console.log(`📊 Emitted ${updateType} to college ${collegeId} counselors`);
+  }
+}
+
+// Helper function to generate comprehensive crisis alert data
+async function generateCrisisAlertData(userId, detectionMethod, urgency, message) {
+  try {
+    const user = await User.findById(userId).populate('college');
+    const analysis = await userAnalysisService.generateUserAnalysis(userId);
+    
+    return {
+      userId,
+      studentInfo: {
+        name: user.name,
+        email: user.email,
+        ...(user.studentId && { studentId: user.studentId }),
+        ...(user.year && { year: user.year }),
+        ...(user.department && { department: user.department }),
+        ...(user.phone && { phone: user.phone })
+      },
+      collegeInfo: {
+        name: user.college?.name,
+        id: user.college?._id
+      },
+      summary: {
+        totalSessions: analysis.overview.totalSessions,
+        recentActivity: analysis.overview.lastActivity,
+        primaryConcerns: analysis.topConcerns.slice(0, 3),
+        mentalHealthTrend: analysis.progressIndicators.overallTrend,
+        riskLevel: user.screeningData?.riskLevel || 'unknown',
+        engagementLevel: analysis.progressIndicators.engagementLevel
+      },
+      crisis: {
+        message,
+        urgency,
+        timestamp: new Date(),
+        detectionMethod
+      }
+    };
+  } catch (error) {
+    console.error('Error generating crisis alert data:', error);
+    return null;
+  }
+}
 
 const authRoutes = require('./routes/auth');
 const appointmentRoutes = require('./routes/appointments');
@@ -37,6 +93,26 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.json());
 
+// Debug endpoint to check current user
+app.get('/api/debug/current-user', (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    res.json({
+      decoded,
+      userId: decoded.userId,
+      userIdType: typeof decoded.userId
+    });
+  } catch (error) {
+    res.status(401).json({ error: error.message });
+  }
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
@@ -45,6 +121,92 @@ app.use('/api/ai-sessions', aiSessionRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/counselor', counselorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/messages', require('./routes/messages'));
+// Admin WebSocket namespace for real-time dashboard updates
+const adminNamespace = io.of('/admin');
+
+adminNamespace.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) {
+    return next(new Error('Authentication error'));
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    if (decoded.role !== 'admin') {
+      return next(new Error('Admin access required'));
+    }
+    socket.userId = decoded.userId;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
+});
+
+adminNamespace.on('connection', (socket) => {
+  console.log(`👨‍💼 Admin connected: ${socket.userId}`);
+  
+  // Send initial system health data
+  socket.emit('system-health', {
+    apiTime: 150,
+    dbStatus: 'healthy',
+    aiService: true,
+    activeUsers: 247,
+    avgResponseTime: 145,
+    aiQueue: 3,
+    uptime: '99.9%'
+  });
+  
+  socket.on('disconnect', () => {
+    console.log(`👨‍💼 Admin disconnected: ${socket.userId}`);
+  });
+});
+
+// Function to broadcast dashboard updates to all admin clients
+const broadcastDashboardUpdate = (data) => {
+  adminNamespace.emit('dashboard-update', data);
+};
+
+// Function to broadcast crisis alerts to admin clients
+const broadcastCrisisAlert = (alert) => {
+  adminNamespace.emit('crisis-alert', alert);
+};
+
+// Function to broadcast institutional updates to admin clients
+const broadcastInstitutionalUpdate = (data) => {
+  adminNamespace.emit('institutional-update', data);
+};
+
+// Export functions for use in other parts of the application
+global.broadcastDashboardUpdate = broadcastDashboardUpdate;
+global.broadcastCrisisAlert = broadcastCrisisAlert;
+global.broadcastInstitutionalUpdate = broadcastInstitutionalUpdate;
+
+// Test crisis alert endpoint
+app.post('/api/test-crisis-alert', async (req, res) => {
+  try {
+    const { collegeId } = req.body;
+    
+    const testAlert = {
+      userId: 'test-user-123',
+      studentName: 'Test Student',
+      studentEmail: 'test@example.com',
+      collegeName: 'Test College',
+      message: 'Test crisis alert via Socket.IO',
+      urgency: 5,
+      timestamp: new Date(),
+      detectionMethod: 'manual-test'
+    };
+    
+    io.to(`college_${collegeId}_counselors`).emit('crisis_alert', testAlert);
+    console.log(`🧪 Test crisis alert sent to college ${collegeId}`);
+    
+    res.json({ success: true, message: 'Test alert sent' });
+  } catch (error) {
+    console.error('Test crisis alert error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 app.use('/api/wellness', wellnessRoutes);
 app.use('/api/ai-analysis', aiAnalysisRoutes);
 app.use('/api/analytics', analyticsRoutes);
@@ -76,13 +238,109 @@ io.on('connection', (socket) => {
   });
 
   // Counselor joins college-specific room for crisis alerts
-  socket.on('join-counselor-room', async (userId) => {
+  // Handle user joining their personal room for messages
+  socket.on('join-user-room', (data) => {
+    const { userId, role } = data;
+    const userRoom = `user_${userId}`;
+    socket.join(userRoom);
+    console.log(`🏠 User ${userId} (${role}) joined room: ${userRoom}`);
+    socket.emit('room_joined', { room: userRoom, userId });
+  });
+
+  // Handle sending messages
+  socket.on('send-message', async (data) => {
     try {
+      const { conversationId, senderId, recipientId, content, priority } = data;
+      
+      // Create message
+      const message = new Message({
+        conversation: conversationId,
+        sender: senderId,
+        recipient: recipientId,
+        content,
+        priority: priority || 'normal'
+      });
+      
+      await message.save();
+      
+      // Update conversation
+      await Conversation.findByIdAndUpdate(conversationId, {
+        lastMessage: message._id,
+        lastActivity: new Date()
+      });
+      
+      // Populate message for real-time delivery
+      const populatedMessage = await Message.findById(message._id)
+        .populate('sender', 'name role')
+        .populate('recipient', 'name role');
+      
+      // Emit to recipient's room
+      io.to(`user_${recipientId}`).emit('new_message', populatedMessage);
+      
+      // Emit back to sender for confirmation
+      socket.emit('message_sent', populatedMessage);
+      
+      console.log(`💬 Message sent from ${senderId} to ${recipientId}`);
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      socket.emit('message_error', { error: 'Failed to send message' });
+    }
+  });
+
+  // Handle message read status
+  socket.on('mark-message-read', async (data) => {
+    try {
+      const { messageId, userId } = data;
+      
+      await Message.findByIdAndUpdate(messageId, {
+        status: 'read',
+        readAt: new Date()
+      });
+      
+      // Notify sender that message was read
+      const message = await Message.findById(messageId);
+      io.to(`user_${message.sender}`).emit('message_read', { messageId, readBy: userId });
+      
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  });
+
+  socket.on('join-counselor-room', async (data) => {
+    try {
+      const userId = typeof data === 'string' ? data : data.counselorId;
       const user = await User.findById(userId).populate('college');
       if (user && user.role === 'counselor' && user.college) {
         socket.join(`user_${userId}`);
         socket.join(`college_${user.college._id}_counselors`);
         console.log(`👨‍⚕️ Counselor ${user.name} joined ${user.college.name} crisis alert room`);
+        
+        // Confirm room join to client
+        socket.emit('room_joined', {
+          room: `college_${user.college._id}_counselors`,
+          collegeName: user.college.name
+        });
+
+        // Send any recent crisis alerts from the last 24 hours
+        const recentAlerts = await AISession.find({
+          'analysis.crisisDetected': true,
+          createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+        }).populate('user').sort({ createdAt: -1 }).limit(10);
+
+        for (const session of recentAlerts) {
+          if (session.user && session.user.college && session.user.college.toString() === user.college._id.toString()) {
+            const alertData = await generateCrisisAlertData(
+              session.user._id,
+              'historical',
+              5,
+              'Recent crisis alert (last 24h)'
+            );
+            if (alertData) {
+              socket.emit('crisis_alert', alertData);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error joining counselor room:', error);
@@ -92,6 +350,7 @@ io.on('connection', (socket) => {
   socket.on('user-message', async (data) => {
     console.log('📨 Received user message:', data.message?.substring(0, 50) + '...');
     console.log('📊 Message data:', { userId: data.userId, sessionId: data.sessionId, hasMessage: !!data.message });
+    console.log('🔍 User ID type and value:', typeof data.userId, data.userId);
     
     try {
       const { message, userId, sessionId, context } = data;
@@ -227,6 +486,16 @@ io.on('connection', (socket) => {
           crisis: sentiment.crisisIndicators?.present,
           method: sentiment.analysisMethod
         });
+
+        // Emit student activity update to counselors
+        const user = await User.findById(userId).populate('college');
+        if (user && user.college) {
+          io.to(`college_${user.college._id}_counselors`).emit('student_activity', {
+            userId,
+            activity: 'ai_session',
+            timestamp: new Date()
+          });
+        }
         
         // Check for crisis indicators
         if (sentiment.crisisIndicators?.present && sentiment.crisisIndicators.confidence > 0.7) {
@@ -247,20 +516,36 @@ io.on('connection', (socket) => {
           
           // Get user's college and alert counselors from same college
           const user = await User.findById(userId).populate('college');
+          console.log('🔍 Crisis detection - User found:', user ? user.name : 'NOT FOUND');
+          console.log('🔍 Crisis detection - College:', user?.college?.name || 'NO COLLEGE');
           if (user && user.college) {
-            // Emit alert to all counselors in the college room
-            io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', {
-              userId,
-              studentName: user.name,
-              studentEmail: user.email,
-              collegeName: user.college.name,
+            // Save crisis alert to database
+            const crisisAlert = new CrisisAlert({
+              user: userId,
+              college: user.college._id,
               message: 'Crisis indicator detected',
-              urgency: sentiment.urgencyLevel,
-              timestamp: new Date(),
-              detectionMethod: 'ai-analysis'
+              detectionMethod: 'ai-analysis',
+              urgency: sentiment.urgencyLevel || 5
             });
+            await crisisAlert.save();
             
-            console.log(`🚨 Crisis alert sent to counselors at ${user.college.name}`);
+            // Generate comprehensive crisis alert data
+            const alertData = await generateCrisisAlertData(
+              userId, 
+              'ai-analysis', 
+              sentiment.urgencyLevel, 
+              'Crisis indicator detected'
+            );
+            
+            if (alertData) {
+              // Emit alert to all counselors in the college room
+              console.log('🚨 Emitting crisis alert to room:', `college_${user.college._id}_counselors`);
+              io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', alertData);
+              console.log(`🚨 Crisis alert sent to counselors at ${user.college.name}`);
+              
+              // Emit analytics update
+              emitDashboardUpdate(user.college._id, 'analytics_update', { type: 'crisis_alert' });
+            }
           }
         }
         
@@ -275,19 +560,32 @@ io.on('connection', (socket) => {
           // Get user's college and alert counselors from same college
           const user = await User.findById(userId).populate('college');
           if (user && user.college) {
-            // Emit alert to all counselors in the college room
-            io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', {
-              userId,
-              studentName: user.name,
-              studentEmail: user.email,
-              collegeName: user.college.name,
+            // Save crisis alert to database
+            const crisisAlert = new CrisisAlert({
+              user: userId,
+              college: user.college._id,
               message: 'Crisis keywords detected in message',
-              urgency: 5,
-              timestamp: new Date(),
-              detectionMethod: 'keyword-fallback'
+              detectionMethod: 'keyword-fallback',
+              urgency: 5
             });
+            await crisisAlert.save();
             
-            console.log(`🚨 Fallback crisis alert sent to counselors at ${user.college.name}`);
+            // Generate comprehensive crisis alert data
+            const alertData = await generateCrisisAlertData(
+              userId, 
+              'keyword-fallback', 
+              5, 
+              'Crisis keywords detected in message'
+            );
+            
+            if (alertData) {
+              // Emit alert to all counselors in the college room
+              io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', alertData);
+              console.log(`🚨 Fallback crisis alert sent to counselors at ${user.college.name}`);
+              
+              // Emit analytics update
+              emitDashboardUpdate(user.college._id, 'analytics_update', { type: 'crisis_alert' });
+            }
           }
         }
         
@@ -305,19 +603,22 @@ io.on('connection', (socket) => {
           // Get user's college and alert counselors from same college
           const user = await User.findById(userId).populate('college');
           if (user && user.college) {
-            // Emit alert to all counselors in the college room
-            io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', {
-              userId,
-              studentName: user.name,
-              studentEmail: user.email,
-              collegeName: user.college.name,
-              message: 'Crisis keywords detected (emergency fallback)',
-              urgency: 5,
-              timestamp: new Date(),
-              detectionMethod: 'emergency-fallback'
-            });
+            // Generate comprehensive crisis alert data
+            const alertData = await generateCrisisAlertData(
+              userId, 
+              'emergency-fallback', 
+              5, 
+              'Crisis keywords detected (emergency fallback)'
+            );
             
-            console.log(`🚨 Emergency crisis alert sent to counselors at ${user.college.name}`);
+            if (alertData) {
+              // Emit alert to all counselors in the college room
+              io.to(`college_${user.college._id}_counselors`).emit('crisis_alert', alertData);
+              console.log(`🚨 Emergency crisis alert sent to counselors at ${user.college.name}`);
+              
+              // Emit analytics update
+              emitDashboardUpdate(user.college._id, 'analytics_update', { type: 'crisis_alert' });
+            }
           }
         }
       }
