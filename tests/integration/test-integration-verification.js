@@ -5,7 +5,7 @@ const path = require('path');
 
 class IntegrationVerifier {
   constructor() {
-    this.clientPath = path.join(__dirname, 'client', 'src');
+    this.clientPath = path.join(__dirname, '..', '..', 'client', 'src');
     this.results = {
       analyticsService: false,
       counselorDashboard: false,

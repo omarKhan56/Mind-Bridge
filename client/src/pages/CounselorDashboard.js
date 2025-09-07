@@ -635,6 +635,28 @@ const CounselorDashboard = () => {
     }
   };
 
+  // Mark crisis alert as resolved
+  const markCrisisResolved = async (alertId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`/api/counselor/crisis-alerts/${alertId}/resolve`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Remove from active crisis alerts list
+      setCrisisAlerts(prev => prev.filter(alert => alert._id !== alertId));
+      
+      // Refresh all data including high-risk students
+      await Promise.all([
+        fetchData(),
+        loadAnalyticsData()
+      ]);
+      
+    } catch (error) {
+      console.error('Failed to resolve crisis alert:', error);
+    }
+  };
+
   const loadAnalyticsData = async () => {
     try {
       const [dashboardRes, trendsRes] = await Promise.all([
@@ -786,12 +808,14 @@ const CounselorDashboard = () => {
                         onClick={() => viewStudentProfile(student.userId)}
                       >
                         <div>
-                          <p className="font-medium text-gray-900">{student.name || `Student #${student.userId.slice(-6)}`}</p>
+                          <p className="font-medium text-gray-900">
+                            {student.name || `Student ${student.userId?.slice(-6)}`}
+                          </p>
                           <p className="text-sm text-gray-600">Risk Score: {student.riskScore}</p>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {student.factors?.slice(0, 3).map(factor => (
+                            {student.riskFactors?.slice(0, 3).map(factor => (
                               <Badge key={factor} variant="secondary" className="text-xs">
-                                {factor.replace('_', ' ')}
+                                {factor.replace(/_/g, ' ')}
                               </Badge>
                             ))}
                           </div>
@@ -816,7 +840,12 @@ const CounselorDashboard = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Average Risk Score</span>
-                      <span className="font-semibold">{dashboardData.trends?.averageRiskScore?.toFixed(1) || 'N/A'}</span>
+                      <span className="font-semibold">
+                        {dashboardData.trends?.averageRiskScore ? 
+                          Number(dashboardData.trends.averageRiskScore).toFixed(1) : 
+                          'N/A'
+                        }
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total Alerts</span>
@@ -1110,16 +1139,42 @@ const CounselorDashboard = () => {
                     {crisisAlerts.filter(a => a.status === 'active').slice(0, 3).map((alert, index) => (
                       <div key={index} className="p-4 bg-white border border-red-200 rounded-lg">
                         <div className="flex items-start justify-between">
-                          <div>
+                          <div className="flex-1">
                             <h4 className="font-semibold text-gray-900">{alert.studentInfo?.name}</h4>
                             <p className="mt-1 text-sm text-gray-600">"{alert.message}"</p>
                             <p className="mt-2 text-xs text-gray-500">
                               {new Date(alert.timestamp).toLocaleString()}
                             </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="destructive" className="text-xs">
+                                Urgency: {alert.urgency}/5
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {alert.detectionMethod}
+                              </Badge>
+                            </div>
                           </div>
-                          <Button size="sm" className="bg-red-600 hover:bg-red-700">
-                            Respond
-                          </Button>
+                          <div className="flex flex-col gap-2 ml-4">
+                            <Button 
+                              size="sm" 
+                              className="bg-red-600 hover:bg-red-700"
+                              onClick={() => {
+                                setMessageStudent(alert.userId);
+                                setMessageStudentName(alert.studentInfo?.name);
+                                setShowMessageModal(true);
+                              }}
+                            >
+                              Respond
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="border-green-600 text-green-600 hover:bg-green-50"
+                              onClick={() => markCrisisResolved(alert._id)}
+                            >
+                              Resolved
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1138,22 +1193,52 @@ const CounselorDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[...messageAlerts, ...alerts].slice(0, 5).map((alert, index) => (
-                    <div key={index} className="flex items-center p-4 rounded-lg bg-gray-50">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center mr-4 ${
-                        alert.type === 'message' ? 'bg-blue-100' : 'bg-yellow-100'
-                      }`}>
-                        {alert.type === 'message' ? 
-                          <MessageCircle className="w-5 h-5 text-blue-600" /> :
-                          <Bell className="w-5 h-5 text-yellow-600" />
-                        }
+                  {/* Message Notifications */}
+                  {messageAlerts.slice(0, 3).map((alert, index) => (
+                    <div key={`msg-${index}`} className="flex items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center mr-4 bg-blue-100">
+                        <MessageCircle className="w-5 h-5 text-blue-600" />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">
-                          {alert.studentName || alert.type}
+                          New message from {alert.studentName}
+                        </p>
+                        <p className="text-sm text-gray-600 truncate">
+                          "{alert.content}"
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(alert.timestamp).toLocaleString()} • Priority: {alert.priority}
+                        </p>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setMessageStudent(alert.studentId);
+                          setMessageStudentName(alert.studentName);
+                          setShowMessageModal(true);
+                        }}
+                      >
+                        Reply
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  {/* Other Alerts */}
+                  {alerts.slice(0, 5 - messageAlerts.length).map((alert, index) => (
+                    <div key={`alert-${index}`} className="flex items-center p-4 rounded-lg bg-gray-50">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center mr-4 bg-yellow-100">
+                        <Bell className="w-5 h-5 text-yellow-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          {alert.type || 'System Alert'}
                         </p>
                         <p className="text-sm text-gray-600">
-                          {alert.content || alert.message}
+                          {alert.message || alert.description}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(alert.timestamp || alert.createdAt).toLocaleString()}
                         </p>
                       </div>
                       <Button size="sm" variant="outline">
@@ -1161,11 +1246,12 @@ const CounselorDashboard = () => {
                       </Button>
                     </div>
                   ))}
+                  
                   {[...messageAlerts, ...alerts].length === 0 && (
                     <div className="py-8 text-center text-gray-500">
                       <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       <p>No recent alerts or messages</p>
-                      <p className="mt-1 text-sm">New alerts will appear here</p>
+                      <p className="mt-1 text-sm">New notifications will appear here</p>
                     </div>
                   )}
                 </div>
@@ -1693,7 +1779,12 @@ const CounselorDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-green-100">Avg Risk Score</p>
-                      <p className="text-2xl font-bold">{dashboardData?.trends?.averageRiskScore?.toFixed(1) || 'N/A'}</p>
+                      <p className="text-2xl font-bold">
+                        {dashboardData?.trends?.averageRiskScore ? 
+                          Number(dashboardData.trends.averageRiskScore).toFixed(1) : 
+                          'N/A'
+                        }
+                      </p>
                     </div>
                     <TrendingUp className="w-8 h-8 text-green-200" />
                   </div>

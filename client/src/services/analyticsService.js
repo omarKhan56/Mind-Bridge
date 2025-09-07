@@ -52,7 +52,7 @@ class AnalyticsService {
   // Dashboard Analytics
   async getDashboardAnalytics() {
     try {
-      const response = await axios.get(`${this.baseURL}/api/analytics/dashboard`, this.getAuthHeaders());
+      const response = await axios.get(`${this.baseURL}/api/counselor/analytics`, this.getAuthHeaders());
       return response.data;
     } catch (error) {
       console.error('Dashboard analytics fetch failed:', error);
