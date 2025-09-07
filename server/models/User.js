@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema({
   language: { type: String, default: 'en' },
   anonymousMode: { type: Boolean, default: true },
   
+  // Password reset
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  
   // Activity tracking
   lastActive: { type: Date, default: Date.now },
   resourcesAccessed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Resource' }],

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { Brain, Heart, Users, Shield, MessageCircle, Calendar, BookOpen, TrendingUp, Bell, Target, Activity, User, Sparkles, Award, Plus } from '../components/Icons';
@@ -39,6 +39,7 @@ import {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   // Socket connection state
   const [socket, setSocket] = useState(null);
@@ -533,6 +534,7 @@ const Dashboard = () => {
   const [selectedCounselor, setSelectedCounselor] = useState(null);
   const [messageSubject, setMessageSubject] = useState('');
   const [messagePriority, setMessagePriority] = useState('normal');
+  const [newMessage, setNewMessage] = useState('');
 
   // Load available counselors
   const loadAvailableCounselors = async () => {

@@ -318,7 +318,7 @@ const AIChat = () => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-14 px-2 overflow-hidden">
+    <div className="h-screen px-2 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-14">
       <div className="max-w-6xl mx-auto h-[calc(100vh-3.5rem)]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -339,34 +339,34 @@ const AIChat = () => {
             transition={{ duration: 0.3 }}
             className={`lg:col-span-1 overflow-hidden ${showSidebar ? 'block' : 'hidden lg:block'}`}
           >
-            <Card className="h-full shadow-lg border-0 bg-gradient-to-b from-gray-50 to-white">
+            <Card className="h-full border-0 shadow-lg bg-gradient-to-b from-gray-50 to-white">
               <CardHeader className="pb-3 border-b border-gray-100">
                 <CardTitle className="flex items-center gap-2 text-gray-800">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <div className="flex items-center justify-center w-8 h-8 shadow-md bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
                     <Brain size={16} className="text-white" />
                   </div>
                   <div>
                     <div className="text-base font-bold">AI Therapy</div>
-                    <div className="text-xs text-gray-500 font-normal">Dr. Sarah Chen</div>
+                    <div className="text-xs font-normal text-gray-500">Dr. Sarah Chen</div>
                   </div>
                 </CardTitle>
               </CardHeader>
               
-              <CardContent className="p-3 space-y-3 flex-1 overflow-hidden flex flex-col">
+              <CardContent className="flex flex-col flex-1 p-3 space-y-3 overflow-hidden">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     onClick={startNewSession}
-                    className="w-full h-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg shadow-md text-sm"
+                    className="w-full h-8 text-sm font-medium text-white rounded-lg shadow-md bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                   >
                     <Plus size={14} className="mr-1" />
                     New Session
                   </Button>
                 </motion.div>
 
-                <div className="space-y-2 flex-1 min-h-0">
-                  <h4 className="text-xs font-semibold text-gray-700 px-1">Recent Sessions</h4>
+                <div className="flex-1 min-h-0 space-y-2">
+                  <h4 className="px-1 text-xs font-semibold text-gray-700">Recent Sessions</h4>
                   
-                  <div className="h-full overflow-y-auto space-y-1 pr-1">
+                  <div className="h-full pr-1 space-y-1 overflow-y-auto">
                     {sessions.length > 0 ? (
                       sessions.slice(0, 10).map((session) => (
                         <motion.div
@@ -382,14 +382,14 @@ const AIChat = () => {
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-xs text-gray-800 truncate mb-1">
+                              <div className="mb-1 text-xs font-medium text-gray-800 truncate">
                                 {session.title?.length > 25 
                                   ? session.title.substring(0, 25) + '...' 
                                   : session.title || 'New Conversation'
                                 }
                               </div>
-                              <div className="flex justify-between items-center text-xs text-gray-500">
-                                <span className="capitalize text-xs">{session.mood || 'general'}</span>
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span className="text-xs capitalize">{session.mood || 'general'}</span>
                                 <span className="text-xs">{new Date(session.createdAt).toLocaleDateString('en-US', { 
                                   month: 'short', 
                                   day: 'numeric'
@@ -401,7 +401,7 @@ const AIChat = () => {
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                               onClick={(e) => deleteSession(session._id, e)}
-                              className="ml-2 p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                              className="p-1 ml-2 text-gray-400 transition-all duration-200 rounded-md opacity-0 hover:text-red-500 hover:bg-red-50 group-hover:opacity-100"
                             >
                               <Trash2 size={12} />
                             </motion.button>
@@ -409,7 +409,7 @@ const AIChat = () => {
                         </motion.div>
                       ))
                     ) : (
-                      <div className="text-center py-4 text-gray-400">
+                      <div className="py-4 text-center text-gray-400">
                         <MessageCircle size={24} className="mx-auto mb-1 opacity-50" />
                         <p className="text-xs">No sessions yet</p>
                       </div>
@@ -429,7 +429,7 @@ const AIChat = () => {
               showSidebar ? 'lg:col-span-3' : 'col-span-1'
             }`}
           >
-            <Card className="h-full shadow-lg flex flex-col">
+            <Card className="flex flex-col h-full shadow-lg">
               <CardHeader className="pb-3 border-b bg-gradient-to-r from-blue-50 to-purple-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -461,13 +461,13 @@ const AIChat = () => {
                         rotate: { duration: 2, repeat: isTyping ? Infinity : 0 },
                         scale: { duration: 1, repeat: isTyping ? Infinity : 0 }
                       }}
-                      className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg"
+                      className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg bg-gradient-to-br from-purple-500 to-blue-600"
                     >
                       <Sparkles size={20} className="text-white" />
                     </motion.div>
                     
                     <div>
-                      <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-800">
                         Dr. Sarah Chen
                         <motion.div
                           animate={{ scale: [1, 1.2, 1] }}
@@ -498,7 +498,7 @@ const AIChat = () => {
                   <div className="flex items-center gap-2">
                     <Badge 
                       variant={messages.length > 0 ? "default" : "secondary"} 
-                      className="px-2 py-1 bg-white/80 text-gray-700 border border-gray-200 text-xs"
+                      className="px-2 py-1 text-xs text-gray-700 border border-gray-200 bg-white/80"
                     >
                       {messages.length}
                     </Badge>
@@ -506,7 +506,7 @@ const AIChat = () => {
                     {currentSession && (
                       <Badge 
                         variant="outline" 
-                        className="px-2 py-1 bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                        className="px-2 py-1 text-xs text-blue-700 border-blue-200 bg-blue-50"
                       >
                         Active
                       </Badge>
@@ -515,21 +515,21 @@ const AIChat = () => {
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 overflow-hidden p-0">
-                <div className="h-full flex flex-col">
+              <CardContent className="flex-1 p-0 overflow-hidden">
+                <div className="flex flex-col h-full">
                   <div 
                     ref={chatContainerRef}
-                    className="flex-1 overflow-y-auto p-6 space-y-4"
+                    className="flex-1 p-6 space-y-4 overflow-y-auto"
                   >
                     {messages.length === 0 ? (
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
-                        className="flex flex-col items-center justify-center h-full space-y-12 px-8"
+                        className="flex flex-col items-center justify-center h-full px-8 space-y-12"
                       >
                         {/* Welcome Section */}
-                        <div className="text-center space-y-6 max-w-lg">
+                        <div className="max-w-lg space-y-6 text-center">
                           <motion.div
                             animate={{ 
                               scale: [1, 1.05, 1],
@@ -541,7 +541,7 @@ const AIChat = () => {
                               repeatDelay: 3,
                               ease: "easeInOut"
                             }}
-                            className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg"
+                            className="flex items-center justify-center w-20 h-20 mx-auto rounded-full shadow-lg bg-gradient-to-br from-blue-500 to-purple-600"
                           >
                             <Brain size={32} className="text-white" />
                           </motion.div>
@@ -550,7 +550,7 @@ const AIChat = () => {
                             <h1 className="text-3xl font-bold text-gray-800">
                               Hi there! 👋
                             </h1>
-                            <p className="text-lg text-gray-600 leading-relaxed">
+                            <p className="text-lg leading-relaxed text-gray-600">
                               I'm <span className="font-semibold text-purple-600">Dr. Sarah Chen</span>, 
                               your AI mental health companion
                             </p>
@@ -564,7 +564,7 @@ const AIChat = () => {
                         {/* Quick Start Options */}
                         <div className="w-full max-w-2xl space-y-6">
                           <div className="text-center">
-                            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                            <h3 className="mb-2 text-lg font-semibold text-gray-700">
                               How are you feeling today?
                             </h3>
                             <p className="text-sm text-gray-500">
@@ -572,7 +572,7 @@ const AIChat = () => {
                             </p>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {[
                               { 
                                 text: "I'm feeling anxious", 
@@ -613,7 +613,7 @@ const AIChat = () => {
                               >
                                 <Button
                                   variant="outline"
-                                  className="w-full h-auto p-6 bg-white hover:bg-gray-50 border-2 border-gray-100 hover:border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group"
+                                  className="w-full h-auto p-6 transition-all duration-300 bg-white border-2 border-gray-100 shadow-sm hover:bg-gray-50 hover:border-gray-200 rounded-2xl hover:shadow-lg group"
                                   onClick={() => handleQuickPrompt(prompt.text)}
                                 >
                                   <div className="flex items-start space-x-4 text-left">
@@ -621,7 +621,7 @@ const AIChat = () => {
                                       {prompt.icon}
                                     </div>
                                     <div className="flex-1 space-y-1">
-                                      <div className="font-semibold text-gray-800 text-base">
+                                      <div className="text-base font-semibold text-gray-800">
                                         {prompt.text}
                                       </div>
                                       <div className="text-sm text-gray-500">
@@ -636,10 +636,10 @@ const AIChat = () => {
                         </div>
 
                         {/* Bottom Section */}
-                        <div className="text-center space-y-4 max-w-md">
+                        <div className="max-w-md space-y-4 text-center">
                           <div className="flex items-center justify-center space-x-2 text-sm">
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                            <span className="text-gray-600 font-medium">
+                            <span className="font-medium text-gray-600">
                               {isConnected ? 'Connected & Ready to Help' : 'Connecting...'}
                             </span>
                           </div>
@@ -692,7 +692,7 @@ const AIChat = () => {
                                   }`}
                                 >
                                   {message.sender === 'ai' && message.therapistName && (
-                                    <div className="text-xs text-gray-500 mb-2 font-medium">
+                                    <div className="mb-2 text-xs font-medium text-gray-500">
                                       {message.therapistName}
                                     </div>
                                   )}
@@ -720,11 +720,11 @@ const AIChat = () => {
                             >
                               <div className="flex items-start gap-3">
                                 <Avatar className="w-8 h-8">
-                                  <AvatarFallback className="bg-purple-500 text-white text-xs">
+                                  <AvatarFallback className="text-xs text-white bg-purple-500">
                                     SC
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="bg-white border border-gray-200 p-4 rounded-2xl rounded-bl-md shadow-sm">
+                                <div className="p-4 bg-white border border-gray-200 shadow-sm rounded-2xl rounded-bl-md">
                                   <div className="flex space-x-1">
                                     {[0, 1, 2].map((i) => (
                                       <motion.div
@@ -750,9 +750,9 @@ const AIChat = () => {
                     <div ref={messagesEndRef} />
                   </div>
 
-                  <div className="border-t bg-white p-3 sticky bottom-0">
+                  <div className="sticky bottom-0 p-3 bg-white border-t">
                     <form onSubmit={handleSendMessage} className="flex gap-2">
-                      <div className="flex-1 relative">
+                      <div className="relative flex-1">
                         <input
                           ref={inputRef}
                           type="text"
@@ -769,7 +769,7 @@ const AIChat = () => {
                         <Button
                           type="submit"
                           disabled={!inputMessage.trim() || !isConnected}
-                          className="h-10 w-10 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                          className="w-10 h-10 shadow-lg rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Send size={16} />
                         </Button>

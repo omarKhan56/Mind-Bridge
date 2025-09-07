@@ -159,6 +159,25 @@ router.post('/conversations/:id/messages', auth, async (req, res) => {
       lastActivity: new Date()
     });
 
+    // Create counselor notification if recipient is a counselor
+    const recipientUser = await User.findById(recipient.user);
+    if (recipientUser && recipientUser.role === 'counselor') {
+      const CounselorNotification = require('../models/CounselorNotification');
+      
+      await CounselorNotification.create({
+        counselor: recipient.user,
+        type: 'new_message',
+        title: 'New Message from Student',
+        message: `You have a new message: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`,
+        priority: priority || 'normal',
+        data: {
+          conversationId: req.params.id,
+          messageId: message._id,
+          studentId: req.user.userId
+        }
+      });
+    }
+
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'name role')
       .populate('recipient', 'name role');
@@ -432,6 +451,22 @@ router.post('/send-to-counselor', auth, async (req, res) => {
     await Conversation.findByIdAndUpdate(conversation._id, {
       lastMessage: newMessage._id,
       lastActivity: new Date()
+    });
+
+    // Create counselor notification
+    const CounselorNotification = require('../models/CounselorNotification');
+    
+    await CounselorNotification.create({
+      counselor: counselorId,
+      type: 'new_message',
+      title: 'New Message from Student',
+      message: `You have a new message: "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`,
+      priority: priority || 'normal',
+      data: {
+        conversationId: conversation._id,
+        messageId: newMessage._id,
+        studentId: req.user.userId
+      }
     });
 
     const populatedMessage = await Message.findById(newMessage._id)

@@ -48,6 +48,27 @@ export const Edit = ({ size = 24, color = 'currentColor', ...props }) => (
   </svg>
 );
 
+export const ChevronDown = ({ size = 24, color = 'currentColor', ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="m6 9 6 6 6-6"/>
+  </svg>
+);
+
+export const Key = ({ size = 24, color = 'currentColor', ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="7.5" cy="15.5" r="5.5"/>
+    <path d="m21 2-9.6 9.6"/>
+    <path d="m15.5 7.5 3 3L22 7l-3-3"/>
+  </svg>
+);
+
+export const Settings = ({ size = 24, color = 'currentColor', ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1m11-7a4 4 0 0 1 0 8m0-8a4 4 0 0 0 0 8"/>
+  </svg>
+);
+
 export const Trash2 = ({ size = 24, color = 'currentColor', ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polyline points="3,6 5,6 21,6"/>

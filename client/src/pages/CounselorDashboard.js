@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle, Eye, TrendingUp, Brain, Target, Bell, X, User, BookOpen, FileText, BarChart3, MessageCircle } from 'lucide-react';
+import { Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle, Eye, TrendingUp, Brain, Target, Bell, X, User, BookOpen, FileText, BarChart3, MessageCircle, Settings, LogOut, Key, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -31,6 +32,32 @@ import {
 import { toast } from 'sonner';
 import axios from 'axios';
 
+const CounselorDashboard = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const handleResetPassword = () => {
+    setShowForgotPasswordModal(true);
+    setShowProfileDropdown(false);
+  };
+
+  const sendResetPasswordEmail = async () => {
+    try {
+      await axios.post('/api/auth/forgot-password', { email: user.email });
+      alert('Password reset email sent! Please check your inbox.');
+      setShowForgotPasswordModal(false);
+    } catch (error) {
+      alert('Failed to send reset email. Please try again.');
+    }
+  };
+
 const StatCard = ({ icon: Icon, title, value, color }) => (
   <motion.div whileHover={{ y: -5, transition: { duration: 0.2 } }}>
     <Card className="transition-shadow duration-300 shadow-lg hover:shadow-xl">
@@ -45,8 +72,7 @@ const StatCard = ({ icon: Icon, title, value, color }) => (
   </motion.div>
 );
 
-const CounselorDashboard = () => {
-  const { user } = useAuth();
+// Main component continues with existing state
   const [analytics, setAnalytics] = useState({});
   const [students, setStudents] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -751,6 +777,44 @@ const CounselorDashboard = () => {
               <span>{socket?.connected ? 'Live' : 'Offline'}</span>
               <span>•</span>
               <span>Updated {lastUpdate.toLocaleTimeString()}</span>
+            </div>
+            
+            {/* Profile Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                  {user?.name?.charAt(0) || 'C'}
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              </button>
+              
+              {showProfileDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-3 border-b border-gray-100">
+                    <p className="font-medium text-gray-900">{user?.name}</p>
+                    <p className="text-sm text-gray-500">{user?.email}</p>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={handleResetPassword}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Key className="w-4 h-4 mr-3" />
+                      Reset Password
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <LogOut className="w-4 h-4 mr-3" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </motion.div> 
@@ -2986,6 +3050,30 @@ const CounselorDashboard = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Reset Password Modal */}
+        {showForgotPasswordModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold mb-4">Reset Password</h3>
+              <p className="text-gray-600 mb-6">
+                We'll send a password reset link to your email address: <strong>{user?.email}</strong>
+              </p>
+              <div className="flex space-x-3">
+                <Button onClick={sendResetPasswordEmail} className="flex-1">
+                  Send Reset Link
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowForgotPasswordModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -197,6 +197,13 @@ const Login = () => {
               transition={{ delay: 0.6 }}
               className="text-center space-y-4"
             >
+              <Link 
+                to="/forgot-password"
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+              >
+                Forgot your password?
+              </Link>
+              
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200" />

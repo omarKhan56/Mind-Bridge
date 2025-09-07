@@ -107,10 +107,10 @@ const Home = () => {
               ) : (
                 <>
                   <Link 
-                    to="/register"
+                    to="/login"
                     className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                   >
-                    Get Started Free
+                    Get Started
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                   <Link 

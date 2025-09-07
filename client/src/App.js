@@ -17,6 +17,8 @@ import Screening from './pages/Screening';
 import CounselorDashboard from './pages/CounselorDashboard';
 import StudentManagement from './pages/StudentManagement';
 import AppointmentManagement from './pages/AppointmentManagement';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function ProtectedRoute({ children, requiredRole, excludeRoles = [] }) {
   const { user, loading } = useAuth();
@@ -59,6 +61,8 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/screening" element={
                 <ProtectedRoute>
                   <Screening />

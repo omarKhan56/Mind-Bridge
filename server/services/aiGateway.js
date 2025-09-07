@@ -23,7 +23,7 @@ class AIGateway {
             temperature: 0.3,
             topK: 20,
             topP: 0.8,
-            maxOutputTokens: 150,
+            maxOutputTokens: 1000,
           }
         });
         console.log('✅ Gemini AI initialized successfully');

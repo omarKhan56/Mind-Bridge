@@ -26,7 +26,7 @@ class APIStatusService {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ 
         model: 'gemini-1.5-flash',
-        generationConfig: { maxOutputTokens: 10 }
+        generationConfig: { maxOutputTokens: 1000 }
       });
       
       // Simple test prompt with timeout
