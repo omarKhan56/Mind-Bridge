@@ -1,6 +1,6 @@
 # 🧠 MindBridge - Digital Mental Health Platform
 
-<div align="center">
+<div align="center"> 
 
 ![MindBridge Logo](https://img.shields.io/badge/MindBridge-Mental%20Health%20Platform-blue?style=for-the-badge&logo=brain&logoColor=white)
 
